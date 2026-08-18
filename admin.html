@@ -1984,8 +1984,6 @@
         let toastTimer = null;
         let titleTimer = null;
         let titleBase = document.title || "Admin Panel";
-        let audioContext = null;
-        let audioUnlocked = false;
 
         const NOTIFICATION_SETTINGS_KEY = "adminNotificationSettings";
 
@@ -2053,53 +2051,182 @@
                 saveNotificationSettings();
             });
 
-            test?.addEventListener("click", () => {
-                unlockNotificationSound();
-                playBellSound(true);
+            test?.addEventListener("click", async () => {
+                await unlockNotificationSound();
+                const ok = await playBellSound(true);
+                if (!ok) {
+                    alert(
+                        "The browser blocked notification audio.\n\n" +
+                        "Click anywhere on this page once (or check the tab's sound " +
+                        "permission / system volume) and press Test again."
+                    );
+                }
             });
         }
 
         setupNotificationSettingsUI();
 
         /* ---------- Sound ---------- */
-        function unlockNotificationSound() {
+        /*
+         * The bell is generated once as a WAV blob and played through an
+         * <audio> element. Media elements keep playing at full quality when the
+         * tab is in the background, while WebAudio oscillators/timers get
+         * throttled or suspended - that is why the old version stayed silent
+         * whenever the admin was on another tab. WebAudio is kept only as a
+         * fallback for browsers that refuse to play the blob.
+         */
+        let audioContext = null;
+        let audioUnlocked = false;
+        let bellSoundUrl = null;
+        let bellAudioPool = [];
+        let bellAutoplayBlocked = false;
+
+        function getNotificationVolume() {
+            const raw = Number(notificationSettings.volume);
+            if (!Number.isFinite(raw)) return 0.3;
+            return Math.max(0, Math.min(100, raw)) / 100;
+        }
+
+        function createBellSoundUrl() {
+            const sampleRate = 44100;
+            const duration = 1.1;
+            const length = Math.floor(sampleRate * duration);
+            const samples = new Float32Array(length);
+            const tones = [
+                { frequency: 880, delay: 0 },
+                { frequency: 1174, delay: 0.035 }
+            ];
+
+            let peak = 0;
+
+            for (let i = 0; i < length; i++) {
+                const t = i / sampleRate;
+                let value = 0;
+
+                for (const tone of tones) {
+                    const localTime = t - tone.delay;
+                    if (localTime < 0) continue;
+                    value +=
+                        Math.sin(2 * Math.PI * tone.frequency * localTime) *
+                        Math.exp(-3.2 * localTime);
+                }
+
+                samples[i] = value;
+                peak = Math.max(peak, Math.abs(value));
+            }
+
+            const scale = peak > 0 ? 0.6 / peak : 0;
+            const buffer = new ArrayBuffer(44 + length * 2);
+            const view = new DataView(buffer);
+
+            const writeText = (offset, text) => {
+                for (let i = 0; i < text.length; i++) {
+                    view.setUint8(offset + i, text.charCodeAt(i));
+                }
+            };
+
+            writeText(0, "RIFF");
+            view.setUint32(4, 36 + length * 2, true);
+            writeText(8, "WAVE");
+            writeText(12, "fmt ");
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeText(36, "data");
+            view.setUint32(40, length * 2, true);
+
+            for (let i = 0; i < length; i++) {
+                const clamped = Math.max(-1, Math.min(1, samples[i] * scale));
+                view.setInt16(44 + i * 2, Math.round(clamped * 32767), true);
+            }
+
+            return URL.createObjectURL(new Blob([buffer], { type: "audio/wav" }));
+        }
+
+        function getBellAudioElement() {
+            if (!bellSoundUrl) bellSoundUrl = createBellSoundUrl();
+
+            const free = bellAudioPool.find(
+                (audio) => audio.paused || audio.ended || audio.currentTime === 0
+            );
+            if (free) return free;
+
+            if (bellAudioPool.length >= 4) return bellAudioPool[0];
+
+            const audio = new Audio(bellSoundUrl);
+            audio.preload = "auto";
+            bellAudioPool.push(audio);
+            return audio;
+        }
+
+        // Browsers only allow audio after a user gesture. This must stay
+        // re-armable: if the first gesture fails, later gestures try again.
+        async function unlockNotificationSound() {
             try {
-                if (!audioContext) {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (!AudioCtx) return;
-                    audioContext = new AudioCtx();
-                }
+                const audio = getBellAudioElement();
+                audio.volume = 0;
+                await audio.play();
+                audio.pause();
+                audio.currentTime = 0;
+                audio.volume = getNotificationVolume();
+                bellAutoplayBlocked = false;
+            } catch (error) {
+                bellAutoplayBlocked = true;
+            }
 
-                if (audioContext.state === "suspended") {
-                    audioContext.resume();
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    if (!audioContext) audioContext = new AudioCtx();
+                    if (audioContext.state === "suspended") {
+                        await audioContext.resume();
+                    }
                 }
-
-                audioUnlocked = true;
             } catch (error) {
                 console.warn("Notification sound could not be unlocked:", error);
             }
+
+            audioUnlocked =
+                !bellAutoplayBlocked ||
+                (!!audioContext && audioContext.state === "running");
+
+            if (audioUnlocked) removeUnlockListeners();
+            return audioUnlocked;
         }
 
-        // Browsers only allow audio after user interaction.
-        window.addEventListener("pointerdown", unlockNotificationSound, { once: true });
-        window.addEventListener("keydown", unlockNotificationSound, { once: true });
+        const unlockEvents = ["pointerdown", "touchstart", "keydown", "click"];
 
-        function playBellSound(forceTest = false) {
-            if (!audioUnlocked || !audioContext) return;
-            if (!forceTest && !notificationSettings.soundEnabled) return;
+        function onUnlockGesture() {
+            unlockNotificationSound();
+        }
+
+        function removeUnlockListeners() {
+            unlockEvents.forEach((type) => {
+                window.removeEventListener(type, onUnlockGesture, true);
+            });
+        }
+
+        unlockEvents.forEach((type) => {
+            window.addEventListener(type, onUnlockGesture, true);
+        });
+
+        function playBellWithAudioContext(volume) {
+            if (!audioContext || audioContext.state !== "running") return false;
 
             try {
-                if (audioContext.state === "suspended") {
-                    audioContext.resume();
-                }
-
                 const now = audioContext.currentTime;
                 const master = audioContext.createGain();
-                const volume = Math.max(0, Math.min(100, Number(notificationSettings.volume))) / 100;
 
+                // Volume is applied once, here only. The old code multiplied it
+                // twice (0.22 * v on master and 0.75 * v per oscillator), which
+                // made 30% volume effectively inaudible.
                 master.gain.setValueAtTime(0.0001, now);
                 master.gain.exponentialRampToValueAtTime(
-                    Math.max(0.0001, 0.22 * volume),
+                    Math.max(0.0001, volume),
                     now + 0.015
                 );
                 master.gain.exponentialRampToValueAtTime(0.0001, now + 1.05);
@@ -2113,23 +2240,59 @@
                     osc.type = "sine";
                     osc.frequency.setValueAtTime(frequency, now + offset);
                     gain.gain.setValueAtTime(0.0001, now + offset);
-                    gain.gain.exponentialRampToValueAtTime(
-                        Math.max(0.0001, 0.75 * volume),
-                        now + offset + 0.01
-                    );
-                    gain.gain.exponentialRampToValueAtTime(
-                        0.0001,
-                        now + offset + 0.95
-                    );
+                    gain.gain.exponentialRampToValueAtTime(0.45, now + offset + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.95);
 
                     osc.connect(gain);
                     gain.connect(master);
                     osc.start(now + offset);
                     osc.stop(now + 1.05);
                 });
+
+                return true;
             } catch (error) {
                 console.warn("Notification bell sound failed:", error);
+                return false;
             }
+        }
+
+        async function playBellSound(forceTest = false) {
+            if (!forceTest && !notificationSettings.soundEnabled) return true;
+
+            const volume = getNotificationVolume();
+            if (volume <= 0) return true;
+
+            try {
+                const audio = getBellAudioElement();
+                audio.currentTime = 0;
+                audio.volume = volume;
+                await audio.play();
+                bellAutoplayBlocked = false;
+                audioUnlocked = true;
+                return true;
+            } catch (error) {
+                bellAutoplayBlocked = true;
+            }
+
+            // Fallback: WebAudio (works while the tab is focused).
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    if (!audioContext) audioContext = new AudioCtx();
+                    if (audioContext.state === "suspended") {
+                        await audioContext.resume();
+                    }
+                }
+            } catch (error) {
+                /* ignored - reported below */
+            }
+
+            if (playBellWithAudioContext(volume)) return true;
+
+            console.warn(
+                "Notification sound blocked by the browser. Click anywhere on the admin page to enable it."
+            );
+            return false;
         }
 
         /* ---------- Badge ---------- */
@@ -2280,6 +2443,11 @@
                 },
                 (payload) => {
                     console.log("New visitor request received:", payload.new);
+                    const newId = payload?.new?.id;
+                    if (newId !== undefined && newId !== null) {
+                        if (seenVisitorIds.has(String(newId))) return;
+                        seenVisitorIds.add(String(newId));
+                    }
                     showVisitorNotification(payload?.new || {});
                 }
             )
@@ -2295,7 +2463,54 @@
                 }
             });
 
+        /* ---------- Polling fallback ----------
+         * If the realtime channel errors, times out or is silently dropped
+         * (very common when the laptop sleeps or the network changes), new
+         * requests would never notify anyone. This poll catches them.
+         */
+        const seenVisitorIds = new Set();
+        let visitorPollPrimed = false;
+
+        async function pollForNewVisitors() {
+            try {
+                const { data, error } = await supabase
+                    .from("visitors")
+                    .select("id, name, created_at")
+                    .order("created_at", { ascending: false })
+                    .limit(5);
+
+                if (error || !Array.isArray(data)) return;
+
+                if (!visitorPollPrimed) {
+                    data.forEach((row) => seenVisitorIds.add(String(row.id)));
+                    visitorPollPrimed = true;
+                    return;
+                }
+
+                data
+                    .slice()
+                    .reverse()
+                    .forEach((row) => {
+                        const key = String(row.id);
+                        if (seenVisitorIds.has(key)) return;
+                        seenVisitorIds.add(key);
+                        console.log("New visitor request (poll):", row);
+                        showVisitorNotification(row);
+                    });
+            } catch (error) {
+                console.warn("Visitor poll failed:", error);
+            }
+        }
+
+        pollForNewVisitors();
+        const visitorPollTimer = setInterval(pollForNewVisitors, 15000);
+
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden) pollForNewVisitors();
+        });
+
         window.addEventListener("beforeunload", () => {
+            clearInterval(visitorPollTimer);
             supabase.removeChannel(visitorNotificationChannel);
         });
     </script>
