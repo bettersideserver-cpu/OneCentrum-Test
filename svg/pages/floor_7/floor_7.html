@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Floor 7</title>
+
+    <link rel="stylesheet" href="../styles.css">
+
+</head>
+
+<body>
+    <img id="floorImage" src="" alt="Floor">
+    <script src="../../../js/floorLoader.js"></script>
+    <style>
+        /* =====================================
+   RESET
+===================================== */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #111;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .unit {
+            fill: transparent;
+            stroke: transparent;
+            cursor: pointer;
+            pointer-events: all;
+            transition: .2s;
+        }
+
+        .unit:hover {
+            fill: rgba(37, 99, 235, .35);
+        }
+
+
+
+        /* =====================================
+   CONTAINER
+===================================== */
+
+        .floor-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* =====================================
+   FLOOR IMAGE
+===================================== */
+
+        #floorImage {
+            position: absolute;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            object-fit: contain;
+
+            user-select: none;
+            pointer-events: none;
+        }
+
+        /* =====================================
+   SVG
+===================================== */
+
+        #floorSVG {
+            position: absolute;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            z-index: 10;
+        }
+
+        /* =====================================
+   CLICKABLE AREAS
+===================================== */
+
+        #floorSVG path {
+
+            fill: rgba(255, 255, 255, 0.001);
+
+            stroke: transparent;
+
+            stroke-width: 3;
+
+            cursor: pointer;
+
+            transition:
+                fill .25s ease,
+                stroke .25s ease,
+                filter .25s ease,
+                transform .25s ease;
+
+        }
+
+        /* =====================================
+   HOVER
+===================================== */
+
+        #floorSVG path:hover {
+
+            fill: rgba(255, 215, 0, .35);
+
+            stroke: #FFD700;
+
+            filter:
+                drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 20px #FFD700);
+
+        }
+
+        /* =====================================
+   CLICK
+===================================== */
+
+        #floorSVG path:active {
+
+            fill: rgba(255, 215, 0, .6);
+
+        }
+@media (max-width: 768px) and (orientation: portrait) {
+    #floorNav,
+    .floor-nav,
+    #floorSelector,
+    .floor-switcher {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        z-index: 200 !important;
+    }
+}
+  
+        /* =====================================
+   OPTIONAL BACK BUTTON
+===================================== */
+
+        .back-btn {
+
+            position: absolute;
+
+            top: 30px;
+            left: 30px;
+
+            padding: 12px 24px;
+
+            background: white;
+
+            color: black;
+
+            text-decoration: none;
+
+            border-radius: 10px;
+
+            z-index: 100;
+
+            font-weight: 600;
+
+        }
+
+        /* =====================================
+           MOBILE ONLY
+           Desktop/tablet styles remain unchanged.
+        ===================================== */
+
+        @media (max-width: 768px) {
+            .floor-container {
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
+            }
+
+            #floorImage,
+            #floorSVG {
+                width: 100%;
+                height: 100%;
+            }
+
+            header {
+                padding: 10px 14px;
+            }
+
+            header h1 {
+                font-size: 16px;
+                margin-bottom: 5px;
+            }
+
+            #legend {
+                gap: 10px;
+                font-size: 11px;
+                flex-wrap: wrap;
+            }
+
+            .back-btn {
+                top: 8px;
+                left: 8px;
+                padding: 7px 13px;
+                font-size: 12px;
+                border-radius: 8px;
+            }
+
+            #tooltip {
+                padding: 7px 10px;
+                font-size: 11px;
+                max-width: 80vw;
+            }
+
+            #timer {
+                top: 52px;
+                right: 8px;
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            #popupContainer .card,
+            #popupContainer .overlay > div,
+            .card {
+                width: min(420px, 92vw);
+                max-height: 88vh;
+                overflow-y: auto;
+                padding: 16px 18px;
+            }
+
+            #popupContainer h2,
+            .card h2 {
+                font-size: 18px;
+                margin-bottom: 10px;
+            }
+
+            #popupContainer input,
+            .card input {
+                padding: 9px 12px;
+                margin-bottom: 9px;
+                font-size: 16px;
+            }
+
+            #popupContainer button,
+            .card button {
+                padding: 10px;
+                font-size: 15px;
+            }
+
+            .holdActions {
+                gap: 10px;
+                margin-top: 12px;
+            }
+
+            .secondaryBtn,
+            .primaryBtn {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+        }
+
+        /* MOBILE LANDSCAPE */
+        @media (orientation: landscape) and (max-height: 500px) {
+
+            .floor-container {
+                position: fixed;
+                inset: 0;
+                width: auto;
+                height: auto;
+                padding: 30px 66px 8px 8px;
+            }
+
+            header {
+                position: relative;
+                z-index: 120;
+                padding: 5px 12px;
+            }
+
+            header h1 {
+                font-size: 14px;
+                margin-bottom: 0;
+            }
+
+            #legend {
+                gap: 10px;
+                font-size: 10px;
+            }
+
+            #floorSVG path {
+                stroke-width: 5;
+            }
+
+            #floorSVG path:hover,
+            #floorSVG path:active {
+                fill: rgba(255, 215, 0, .4);
+                stroke: #FFD700;
+                filter: drop-shadow(0 0 6px #FFD700);
+            }
+
+            .back-btn {
+                top: 8px;
+                left: 8px;
+                padding: 7px 13px;
+                font-size: 12px;
+                border-radius: 8px;
+            }
+
+            #timer {
+                top:  48px;
+                right: 66px;
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            #tooltip {
+                padding: 7px 10px;
+                font-size: 11px;
+                max-width: 55vw;
+            }
+
+            #floorNav,
+            .floor-nav,
+            #floorSelector,
+            .floor-switcher {
+                top: 50% !important;
+                right: 6px !important;
+                bottom: auto !important;
+                left: auto !important;
+                transform: translateY(-50%) !important;
+                padding: 6px !important;
+                border-radius: 12px !important;
+                gap: 5px !important;
+                zoom: .8;
+            }
+
+            #popupContainer .card,
+            #popupContainer .overlay > div,
+            .card {
+                width: min(420px, 92vw);
+                max-height: 88vh;
+                overflow-y: auto;
+                padding: 16px 18px;
+            }
+
+            #popupContainer h2,
+            .card h2 {
+                font-size: 18px;
+                margin-bottom: 10px;
+            }
+
+            #popupContainer input,
+            .card input {
+                padding: 9px 12px;
+                margin-bottom: 9px;
+                font-size: 16px;
+            }
+
+            #popupContainer button,
+            .card button {
+                padding: 10px;
+                font-size: 15px;
+            }
+
+            .holdActions {
+                gap: 10px;
+                margin-top: 12px;
+            }
+
+            .secondaryBtn,
+            .primaryBtn {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+        }
+
+        /* VERY SHORT LANDSCAPE */
+        @media (orientation: landscape) and (max-height: 380px) {
+
+            .floor-container {
+                padding: 26px 56px 6px 6px;
+            }
+
+            .back-btn {
+                padding: 6px 11px;
+                font-size: 11px;
+            }
+
+            #floorNav,
+            .floor-nav,
+            #floorSelector,
+            .floor-switcher {
+                zoom: .7;
+            }
+        }
+/* ==========================================
+   PORTRAIT MOBILE - CENTER FLOOR IMAGE
+========================================== */
+
+@media screen and (max-width: 768px) and (orientation: portrait) {
+
+    html,
+    body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .floor-container {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    #floorImage,
+    #floorSVG {
+        position: absolute;
+        inset: 0;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    #floorImage {
+        object-fit: contain !important;
+        object-position: center center !important;
+    }
+
+    #floorSVG {
+        z-index: 10;
+    }
+
+    header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 120;
+    }
+}header h1 {
+    display: none !important;
+}
+    </style>
+
+    <header>
+        <h1>Interactive Floor Plan</h1>
+        <div id="legend"></div>
+    </header>
+    <div id="timer">
+        00:00
+    </div>
+    <div id="tooltip"></div>
+    <div class="floor-container">
+
+        <!-- Floor Plan Image -->
+        <img src="Floor-07.png" id="floorImage" alt="Floor Plan">
+
+        <!-- SVG Overlay -->
+        <svg id="floorSVG" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4967 2341"
+            preserveAspectRatio="xMidYMid meet">
+
+            <path id="7_BoutiqueOffice_701" class="unit"
+                d="M2298.5 1243.11v203.8h88.01v17.61h200.45v-296.47h-165.51v74.22z" class="st0" />
+
+            <path id="7_BoutiqueOffice_702" class="unit" d="M2586.96 1168.05h261.79v296.47h-261.79z" class="st0" />
+
+            <path id="7_BoutiqueOffice_703" class="unit" d="M2848.75 1168.05h261.79v296.47h-261.79z" class="st0" />
+
+            <path id="7_BoutiqueOffice_704" class="unit" d="M3110.53 1168.05h260.9v296.47h-260.9z" class="st0" />
+
+            <path id="7_BoutiqueOffice_705" class="unit" d="M3371.43 1168.05h261.79v296.47h-261.79z" class="st0" />
+
+            <path id="7_BoutiqueOffice_706" class="unit"
+                d="M3058.42 918.96v166.48h574.8V918.96H3578v-7.55h-46.67v7.97h-287.12v-7.97s-39.11-1.68-39.11 0v7.97s-146.67-.84-146.67-.42Z"
+                class="st0" />
+
+            <path id="7_BoutiqueOffice_707" class="unit" d="M835 918.65h393.68v167H835z" class="st0" />
+
+            <path id="7_BoutiqueOffice_708" class="unit" d="M835 1168.1h217.59v298.57H835z" class="st0" />
+
+            <path id="7_BoutiqueOffice_709" class="unit" d="M1052.59 1168.1v298.57h246.68v-300.25z" class="st0" />
+
+            <path id="7_BoutiqueOffice_710" class="unit" d="M1299.27 1166.42h247.12v300.25h-247.12z" class="st0" />
+
+            <path id="7_BoutiqueOffice_711" class="unit" d="M1546.39 1166.42v300.25h251.56V1168.1z" class="st0" />
+
+        </svg>
+
+    </div>
+    <script>
+        window.unitDetails = {
+
+            "7_BoutiqueOffice_701": {
+                unit: "Boutique Office 701",
+                superArea: "1,054 sq.ft",
+                carpetArea: "527 sq.ft"
+            },
+
+            "7_BoutiqueOffice_702": {
+                unit: "Boutique Office 702",
+                superArea: "996 sq.ft",
+                carpetArea: "498 sq.ft"
+            },
+
+            "7_BoutiqueOffice_703": {
+                unit: "Boutique Office 703",
+                superArea: "996 sq.ft",
+                carpetArea: "498 sq.ft"
+            },
+
+            "7_BoutiqueOffice_704": {
+                unit: "Boutique Office 704",
+                superArea: "996 sq.ft",
+                carpetArea: "498 sq.ft"
+            },
+
+            "7_BoutiqueOffice_705": {
+                unit: "Boutique Office 705",
+                superArea: "1,034 sq.ft",
+                carpetArea: "517 sq.ft"
+            },
+
+            "7_BoutiqueOffice_706": {
+                unit: "Boutique Office 706",
+                superArea: "1,296 sq.ft",
+                carpetArea: "648 sq.ft"
+            },
+
+            "7_BoutiqueOffice_707": {
+                unit: "Boutique Office 707",
+                superArea: "896 sq.ft",
+                carpetArea: "448 sq.ft"
+            },
+
+            "7_BoutiqueOffice_708": {
+                unit: "Boutique Office 708",
+                superArea: "870 sq.ft",
+                carpetArea: "435 sq.ft"
+            },
+
+            "7_BoutiqueOffice_709": {
+                unit: "Boutique Office 709",
+                superArea: "952 sq.ft",
+                carpetArea: "476 sq.ft"
+            },
+
+            "7_BoutiqueOffice_710": {
+                unit: "Boutique Office 710",
+                superArea: "952 sq.ft",
+                carpetArea: "476 sq.ft"
+            },
+
+            "7_BoutiqueOffice_711": {
+                unit: "Boutique Office 711",
+                superArea: "986 sq.ft",
+                carpetArea: "493 sq.ft"
+            }
+
+        };
+    </script>
+
+   <div id="popupContainer"></div>
+
+    <script>
+        fetch("../hold.html")
+            .then(r => r.text())
+            .then(html => {
+
+                document.getElementById("popupContainer").innerHTML = html;
+
+            });
+    </script>
+
+    <script type="module" src="../../../js/database.js"></script>
+
+    <script type="module" src="../../../js/visitor.js"></script>
+
+
+    <script src="../floor-nav.js"></script>
+</body>
+
+</html>
