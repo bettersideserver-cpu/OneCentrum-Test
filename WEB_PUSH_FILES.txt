@@ -1,0 +1,6 @@
+Added:
+- service-worker.js
+- push_subscriptions.sql
+- supabase/functions/notify-new-visitor/index.ts
+- WEB_PUSH_SETUP.md
+- admin.html updated to register push subscriptions
