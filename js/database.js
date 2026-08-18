@@ -398,7 +398,7 @@ export async function approveVisitor(docId, minutes) {
 export async function rejectVisitor(docId) {
     const { error } = await supabase
         .from(VISITOR_TABLE)
-        .update({ status: 'Rejected' })
+        .update({ status: 'Rejected', expires_at: null })
         .eq('id', docId);
 
     if (error) throw error;

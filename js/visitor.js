@@ -308,6 +308,91 @@ function stopPolling() {
 }
 
 // ==========================
+// Live visitor session watcher
+// Always fetches the current visitor row from Supabase.
+// This is intentionally independent of the access timer so
+// an admin rejection ends an already-approved session too.
+// ==========================
+async function enforceLiveSessionStatus() {
+
+    const id = localStorage.getItem("currentVisitor");
+
+    if (!id) return null;
+
+    try {
+        await checkExpiredVisitors();
+        const visitor = await getVisitor(id);
+
+        if (!visitor) {
+            localStorage.removeItem("currentVisitor");
+            localStorage.removeItem("verified");
+            localStorage.removeItem("pendingFloorRedirect");
+            stopPolling();
+            return null;
+        }
+
+        // Rejection must immediately invalidate the local session,
+        // even when the visitor was already approved and on a floor.
+        if (visitor.status === "Rejected") {
+            localStorage.removeItem("currentVisitor");
+            localStorage.removeItem("verified");
+            localStorage.removeItem("pendingFloorRedirect");
+            stopPolling();
+            clearInterval(timerInterval);
+            hideAll();
+
+            if (popup) {
+                alert("Your request has been rejected.");
+                popup.style.display = "flex";
+            } else {
+                window.location.href = HOME_URL;
+            }
+            return null;
+        }
+
+        // Expired status or an expired timestamp also invalidates access.
+        if (visitor.status === "Expired" ||
+            (visitor.expiresAt && visitor.expiresAt <= Date.now())) {
+
+            localStorage.removeItem("verified");
+            localStorage.removeItem("pendingFloorRedirect");
+            stopPolling();
+            clearInterval(timerInterval);
+            hideAll();
+
+            if (expired) {
+                expired.style.display = "flex";
+            } else {
+                window.location.href = HOME_URL + "?expired=1";
+            }
+            return null;
+        }
+
+        return visitor;
+
+    } catch (error) {
+        // Do not destroy a valid session because of a temporary network
+        // failure. The next poll will retry.
+        console.error("Live visitor session check failed:", error);
+        return undefined;
+    }
+}
+
+function startLiveSessionWatcher() {
+    clearInterval(pollInterval);
+
+    const tick = async () => {
+        const result = await enforceLiveSessionStatus();
+        if (result === null) {
+            stopPolling();
+        }
+    };
+
+    tick();
+    pollInterval = setInterval(tick, 1000);
+}
+
+// ==========================
 // Registration
 // ==========================
 
@@ -764,26 +849,10 @@ async function guardFloorPage() {
     // Approved, verified, and still has time left.
     await openFloor(visitor);
 
-    // Keep watching the clock while they browse this
-    // floor — if time runs out mid-visit, kick them
-    // back to the homepage automatically.
-    clearInterval(pollInterval);
-
-    pollInterval = setInterval(async () => {
-
-        if (visitor.expiresAt && visitor.expiresAt <= Date.now()) {
-
-            stopPolling();
-
-            await checkExpiredVisitors();
-
-            localStorage.removeItem("verified");
-
-            window.location.href = HOME_URL + "?expired=1";
-
-        }
-
-    }, 1000);
+    // Keep checking the live Supabase visitor row while they browse.
+    // This catches admin rejection even after approval and during an
+    // active floor session.
+    startLiveSessionWatcher();
 
     return true;
 
@@ -879,27 +948,9 @@ async function guardFloorPage() {
 
             startTimer(visitor);
 
-            clearInterval(pollInterval);
-
-            pollInterval = setInterval(async () => {
-
-                if (visitor.expiresAt && visitor.expiresAt <= Date.now()) {
-
-                    stopPolling();
-
-                    await checkExpiredVisitors();
-
-                    localStorage.removeItem("verified");
-
-                    hideAll();
-
-                    if (expired) {
-                        expired.style.display = "flex";
-                    }
-
-                }
-
-            }, 1000);
+            // Keep the session tied to the current Supabase status.
+            // Do not rely on the old visitor object captured at page load.
+            startLiveSessionWatcher();
 
         }
 
