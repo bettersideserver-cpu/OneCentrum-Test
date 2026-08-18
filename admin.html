@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Real Estate Admin</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        body {
+            display: flex;
+            background: #f4f6fb;
+            color: #333;
+        }
+
+        /* Sidebar */
+
+        .sidebar {
+            width: 260px;
+            height: 100vh;
+            background: #1e293b;
+            color: #fff;
+            position: fixed;
+            left: 0;
+            top: 0;
+            padding: 30px 20px;
+        }
+        .sidebarBrand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 42px;
+            min-height: 132px;
+            color: #fff;
+            text-align: center;
+        }
+
+        .sidebarLogo {
+            width: 76px;
+            height: 76px;
+            object-fit: contain;
+            flex: 0 0 auto;
+            margin-bottom: 2px;
+        }
+
+        .brandText {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.1;
+        }
+
+        .brandCompany {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+        }
+
+        .brandRole {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-top: 7px;
+            font-size: 15px;
+            font-weight: 500;
+            color: rgba(255,255,255,.78);
+        }
+
+        .brandDot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #35c759;
+            display: inline-block;
+        }
+
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar li {
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: .3s;
+        }
+
+        .sidebar li:hover {
+            background: #334155;
+        }
+
+        .sidebar li.active {
+            background: #2563eb;
+        }
+
+        /* Main */
+
+        .main {
+            margin-left: 260px;
+            width: calc(100% - 260px);
+            padding: 30px;
+        }
+
+        /* Header */
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+        }
+
+        .header p {
+            color: #777;
+            margin-top: 5px;
+        }
+
+        .admin-identity {
+            margin-top: 8px;
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+            word-break: break-all;
+        }
+
+        .admin-identity .admin-name {
+            color: #1e293b;
+            font-weight: 700;
+        }
+
+        .logout {
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: .3s;
+        }
+
+        .logout:hover {
+            background: #dc2626;
+        }
+
+        /* Dashboard Cards */
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 35px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, .08);
+        }
+
+        .card h3 {
+            color: #777;
+            margin-bottom: 10px;
+        }
+
+        .card h2 {
+            font-size: 34px;
+            color: #2563eb;
+        }
+
+        /* Section */
+
+        .section {
+            background: #fff;
+            margin-bottom: 30px;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, .08);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-header h2 {
+            font-size: 24px;
+        }
+
+        /* Visitor Cards */
+
+        .request-card {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: .3s;
+        }
+
+        .request-card:hover {
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .08);
+        }
+
+        .request-card h3 {
+            margin-bottom: 10px;
+        }
+
+        .request-card p {
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .status {
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        .timeSelect {
+            width: 180px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            margin-top: 10px;
+            margin-bottom: 15px;
+        }
+
+        /* Buttons */
+
+        button {
+            cursor: pointer;
+        }
+
+        .approve {
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-right: 10px;
+        }
+
+        .approve:hover {
+            background: #16a34a;
+        }
+
+        .reject {
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+
+        .reject:hover {
+            background: #dc2626;
+        }
+
+        /* Tables */
+
+        .propertyTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .propertyTable th {
+            background: #2563eb;
+            color: #fff;
+            padding: 15px;
+            text-align: left;
+        }
+
+        .propertyTable td {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .propertyTable tr:hover {
+            background: #f8fbff;
+        }
+
+        /* Select */
+
+        select {
+            width: 170px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        /* Color Picker */
+
+        input[type=color] {
+            width: 60px;
+            height: 40px;
+            border: none;
+            background: none;
+            cursor: pointer;
+        }
+
+        /* Save Button */
+
+        .saveProperty {
+
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+
+        }
+
+        .saveProperty:hover {
+
+            background: #1d4ed8;
+
+        }
+
+        /* Add Category */
+
+        #addCategory {
+
+            margin-top: 20px;
+            background: #16a34a;
+            color: #fff;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+
+        }
+
+        #addCategory:hover {
+
+            background: #15803d;
+
+        }
+
+        /* Delete Button (was accidentally nested inside the media query) */
+
+        .delete {
+
+            background: #ef4444;
+
+            color: #fff;
+
+            border: none;
+
+            padding: 10px 18px;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+            margin-left: 10px;
+
+            font-size: 14px;
+
+            font-weight: 600;
+
+            transition: all .25s ease;
+
+        }
+
+        .delete:hover {
+
+            background: #dc2626;
+
+            transform: translateY(-2px);
+
+            box-shadow: 0 8px 18px rgba(239, 68, 68, .35);
+
+        }
+
+        .delete:active {
+
+            transform: scale(.96);
+
+        }
+        .searchBox {
+
+            width: 280px;
+            padding: 12px 16px;
+
+            border-radius: 10px;
+
+            border: 1px solid #dcdcdc;
+
+            font-size: 15px;
+
+        }
+
+        .floorTabs {
+
+            display: flex;
+
+            flex-wrap: wrap;
+
+            gap: 10px;
+
+            margin: 20px 0;
+
+        }
+
+        .floor {
+
+            padding: 10px 18px;
+
+            border: none;
+
+            background: #eef2ff;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+            font-weight: 600;
+
+            transition: .25s;
+
+        }
+
+        .floor:hover {
+
+            background: #2563eb;
+
+            color: white;
+
+        }
+
+        .floor.active {
+
+            background: #2563eb;
+
+            color: white;
+
+        }
+
+        .floorStats {
+
+            display: grid;
+
+            grid-template-columns: repeat(4, 1fr);
+
+            gap: 15px;
+
+            margin-bottom: 20px;
+
+        }
+
+        .stat {
+
+            background: white;
+
+            padding: 18px;
+
+            border-radius: 12px;
+
+            text-align: center;
+
+            box-shadow: 0 5px 15px rgba(0, 0, 0, .08);
+
+        }
+
+        .stat span {
+
+            color: #777;
+
+            font-size: 14px;
+
+        }
+
+        .stat h3 {
+
+            margin-top: 8px;
+
+            font-size: 28px;
+
+            color: #2563eb;
+
+        }
+
+
+
+
+        /* ==========================================
+   Buyer Information
+========================================== */
+
+        .buyer-card {
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            gap: 20px;
+
+            background: #fff;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 14px;
+
+            padding: 16px;
+
+            box-shadow: 0 3px 10px rgba(0, 0, 0, .05);
+
+        }
+
+        .buyer-fields {
+
+            display: flex;
+
+            gap: 18px;
+
+            flex: 1;
+
+        }
+
+        .field {
+
+            flex: 1;
+
+            display: flex;
+
+            flex-direction: column;
+
+        }
+
+        .field label {
+
+            font-size: 12px;
+
+            font-weight: 600;
+
+            color: #666;
+
+            margin-bottom: 6px;
+
+        }
+
+        .field input {
+
+            width: 100%;
+
+            height: 42px;
+
+            border: 1px solid #d1d5db;
+
+            border-radius: 8px;
+
+            padding: 0 12px;
+
+            font-size: 14px;
+
+            outline: none;
+
+        }
+
+        .field input:focus {
+
+            border-color: #2563eb;
+
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+
+        }
+
+        .saveBuyer {
+
+            width: 110px;
+
+            height: 42px;
+
+            border: none;
+
+            border-radius: 8px;
+
+            background: #0f6b3c;
+
+            color: #fff;
+
+            font-size: 14px;
+
+            font-weight: 600;
+
+            cursor: pointer;
+
+        }
+
+        .saveBuyer:hover {
+
+            background: #0b572f;
+
+        }
+
+        #propertyTable select {
+
+            width: 170px;
+
+            height: 42px;
+
+            border-radius: 8px;
+
+            border: 1px solid #d1d5db;
+
+            padding: 0 12px;
+
+        }
+
+        .area {
+
+            line-height: 1.8;
+
+        }
+
+        .area strong {
+
+            color: #111827;
+
+        }
+
+        .table-actions {
+
+            display: flex;
+
+            justify-content: flex-end;
+
+            gap: 15px;
+
+            margin-top: 25px;
+
+        }
+
+        .save-btn {
+
+            background: #2563eb;
+
+            color: white;
+
+            border: none;
+
+            padding: 12px 28px;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+            font-weight: 600;
+
+        }
+
+        .cancel-btn {
+
+            background: white;
+
+            border: 1px solid #d1d5db;
+
+            padding: 12px 28px;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* ==========================================
+   MOBILE RESPONSIVE LAYER
+========================================== */
+
+        html,
+        body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
+        /* horizontal scroll shell for wide tables */
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-wrap .propertyTable {
+            min-width: 780px;
+        }
+
+        /* hamburger + sidebar overlay (hidden on desktop) */
+
+        .menuToggle {
+            display: none;
+            position: fixed;
+            top: 14px;
+            left: 14px;
+            z-index: 60;
+            width: 44px;
+            height: 44px;
+            border: none;
+            border-radius: 10px;
+            background: #1e293b;
+            color: #fff;
+            font-size: 20px;
+            line-height: 1;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, .18);
+        }
+
+        .sidebarOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, .5);
+            z-index: 40;
+        }
+
+        .sidebarOverlay.show {
+            display: block;
+        }
+
+        /* ---------- Tablet / small laptop ---------- */
+
+        @media (max-width: 1100px) {
+
+            .floorStats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .buyer-fields {
+                flex-wrap: wrap;
+            }
+
+            .field {
+                flex: 1 1 180px;
+            }
+        }
+
+        /* ---------- Mobile & tablet: drawer sidebar ---------- */
+
+        @media (max-width: 900px) {
+
+            body {
+                display: block;
+            }
+
+            .menuToggle {
+                display: block;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 78%;
+                max-width: 300px;
+                height: 100vh;
+                overflow-y: auto;
+                padding: 24px 18px;
+                transform: translateX(-100%);
+                transition: transform .3s ease;
+                z-index: 50;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar h2 {
+                margin-bottom: 26px;
+                font-size: 20px;
+            }
+
+            .sidebar li {
+                padding: 14px 16px;
+            }
+
+            .main {
+                margin-left: 0;
+                width: 100%;
+                padding: 74px 16px 40px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 14px;
+                margin-bottom: 22px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
+            /* logout pinned to top-right corner on mobile */
+
+            .logout {
+                position: fixed;
+                top: 14px;
+                right: 14px;
+                z-index: 60;
+                width: auto;
+                height: 44px;
+                padding: 0 16px;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: 600;
+                box-shadow: 0 6px 16px rgba(239, 68, 68, .3);
+            }
+
+            .cards {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
+            }
+
+            .card {
+                padding: 18px;
+            }
+
+            .card h3 {
+                font-size: 14px;
+                margin-bottom: 6px;
+            }
+
+            .card h2 {
+                font-size: 26px;
+            }
+
+            .section {
+                padding: 18px 16px;
+                margin-bottom: 20px;
+                border-radius: 12px;
+            }
+
+            .section-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .section-header h2 {
+                font-size: 20px;
+            }
+
+            .searchBox {
+                width: 100%;
+            }
+
+            .floorTabs {
+                gap: 8px;
+                margin: 16px 0;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 4px;
+            }
+
+            .floor {
+                flex: 0 0 auto;
+                padding: 9px 15px;
+                font-size: 14px;
+            }
+
+            .floorStats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+
+            .stat {
+                padding: 14px;
+            }
+
+            .stat h3 {
+                font-size: 22px;
+            }
+
+            /* stacked buyer form */
+
+            .buyer-card {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 14px;
+            }
+
+            .buyer-fields {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .field {
+                flex: 1 1 auto;
+            }
+
+            .saveBuyer {
+                width: 100%;
+            }
+
+            /* request cards */
+
+            .request-card {
+                padding: 16px;
+            }
+
+            .request-card h3 {
+                font-size: 17px;
+            }
+
+            .timeSelect,
+            select,
+            #propertyTable select {
+                width: 100%;
+                max-width: 100%;
+            }
+
+            .approve,
+            .reject {
+                width: 100%;
+                margin: 0 0 10px 0;
+                padding: 12px 16px;
+            }
+
+            .delete {
+                width: 100%;
+                margin: 0 0 10px 0;
+            }
+
+            .propertyTable th,
+            .propertyTable td {
+                padding: 12px;
+                font-size: 14px;
+                white-space: nowrap;
+            }
+
+            .table-actions {
+                flex-direction: column-reverse;
+                gap: 10px;
+                margin-top: 20px;
+            }
+
+            .save-btn,
+            .cancel-btn {
+                width: 100%;
+                padding: 13px 20px;
+            }
+        }
+
+        /* ---------- Small phones ---------- */
+
+        @media (max-width: 560px) {
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .floorStats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .main {
+                padding: 70px 12px 32px;
+            }
+
+            .section {
+                padding: 16px 12px;
+            }
+        }
+
+        /* avoid iOS zoom-on-focus */
+
+        @media (max-width: 900px) {
+
+            input,
+            select,
+            textarea,
+            button {
+                font-size: 16px;
+            }
+        }
+
+        /* ==========================================
+           Status Management
+        ========================================== */
+        .status-manager {
+            display: grid;
+            grid-template-columns: minmax(280px, 360px) 1fr;
+            gap: 24px;
+        }
+
+        .status-form,
+        .status-list {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 20px;
+        }
+
+        .status-form h3,
+        .status-list h3 {
+            margin: 0 0 16px;
+        }
+
+        .status-form label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin: 12px 0 6px;
+        }
+
+        .status-form input[type="text"] {
+            width: 100%;
+            height: 42px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 0 12px;
+            box-sizing: border-box;
+        }
+
+        .status-color-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-color-row input[type="color"] {
+            width: 54px;
+            height: 42px;
+            padding: 2px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .status-form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .status-form-actions button {
+            flex: 1;
+            padding: 11px 14px;
+            border: 0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        #statusSaveBtn {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        #statusCancelBtn {
+            background: #f3f4f6;
+            color: #111827;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status-item:last-child {
+            border-bottom: 0;
+        }
+
+        .status-swatch {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            border: 1px solid rgba(0,0,0,.12);
+            flex: 0 0 auto;
+        }
+
+        .status-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .status-name {
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .status-id {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 3px;
+        }
+
+        .status-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .status-actions button {
+            border: 0;
+            border-radius: 7px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .status-edit {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+
+        .status-delete {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .status-message {
+            min-height: 20px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        @media (max-width: 800px) {
+            .status-manager {
+                grid-template-columns: 1fr;
+            }
+
+            .status-item {
+                align-items: flex-start;
+            }
+
+            .status-actions {
+                flex-direction: column;
+            }
+        }
+
+
+        /* ==========================================
+           New Visitor Request Notifications
+        ========================================== */
+        .notification-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notification-btn {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+            color: #1e293b;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 21px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,.06);
+        }
+
+        .notification-btn:hover {
+            background: #f8fafc;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            min-width: 19px;
+            height: 19px;
+            padding: 0 5px;
+            border-radius: 999px;
+            background: #ef4444;
+            color: #fff;
+            border: 2px solid #fff;
+            font-size: 11px;
+            font-weight: 800;
+            line-height: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        .notification-toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            width: min(390px, calc(100vw - 32px));
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-left: 5px solid #2563eb;
+            border-radius: 12px;
+            padding: 16px 18px;
+            box-shadow: 0 14px 35px rgba(15,23,42,.18);
+            z-index: 9999;
+            transform: translateX(calc(100% + 40px));
+            opacity: 0;
+            pointer-events: none;
+            transition: transform .3s ease, opacity .3s ease;
+        }
+
+        .notification-toast.show {
+            transform: translateX(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .notification-toast-title {
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 5px;
+        }
+
+        .notification-toast-text {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .notification-toast-action {
+            margin-top: 12px;
+            border: 0;
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: #2563eb;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .notification-toast-close {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            border: 0;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 20px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        @media (max-width: 900px) {
+            .notification-wrap {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .notification-toast {
+                top: 70px;
+                right: 16px;
+            }
+        }
+
+
+        /* Notification settings */
+        .notification-settings {
+            max-width: 760px;
+        }
+
+        .notification-setting-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 22px;
+            margin-top: 18px;
+        }
+
+        .notification-setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 16px 0;
+            border-bottom: 1px solid #eef2f7;
+        }
+
+        .notification-setting-row:last-child {
+            border-bottom: 0;
+        }
+
+        .notification-setting-label {
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .notification-setting-help {
+            margin-top: 4px;
+            color: #64748b;
+            font-size: 13px;
+        }
+
+        .notification-toggle {
+            position: relative;
+            width: 48px;
+            height: 26px;
+            flex: 0 0 48px;
+        }
+
+        .notification-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .notification-toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: #cbd5e1;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .notification-toggle-slider::before {
+            content: "";
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            left: 3px;
+            top: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: .2s;
+            box-shadow: 0 1px 4px rgba(0,0,0,.18);
+        }
+
+        .notification-toggle input:checked + .notification-toggle-slider {
+            background: #2563eb;
+        }
+
+        .notification-toggle input:checked + .notification-toggle-slider::before {
+            transform: translateX(22px);
+        }
+
+        .notification-volume-wrap {
+            min-width: 280px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        #notificationVolume {
+            flex: 1;
+        }
+
+        #notificationVolumeValue {
+            width: 45px;
+            text-align: right;
+            font-weight: 700;
+            color: #2563eb;
+        }
+
+        .notification-test-btn {
+            background: #2563eb;
+            color: #fff;
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .notification-test-btn:hover {
+            background: #1d4ed8;
+        }
+
+
+        .header-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+            min-width: 150px;
+        }
+
+        .header-actions .logout {
+            width: 100%;
+        }
+
+        .header-actions .refresh-page-btn {
+            margin-top: 0;
+        }
+
+        .refresh-page-btn {
+            width: 100%;
+            margin-top: 12px;
+            background: #334155;
+            color: #fff;
+            border: 0;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .refresh-page-btn:hover {
+            background: #475569;
+        }
+
+        @media (max-width: 900px) {
+            .notification-setting-row {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .notification-volume-wrap {
+                width: 100%;
+                min-width: 0;
+            }
+        }
+
+    
+        @media (max-width: 900px) {
+            .header-actions {
+                position: fixed;
+                top: 14px;
+                right: 14px;
+                z-index: 60;
+                min-width: 150px;
+            }
+
+            .header-actions .logout {
+                position: static;
+                width: 100%;
+            }
+
+            .header-actions .refresh-page-btn {
+                width: 100%;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <!-- Mobile menu toggle -->
+
+    <button class="menuToggle" id="menuToggle" aria-label="Open menu">&#9776;</button>
+
+    <div class="sidebarOverlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+
+    <aside class="sidebar" id="sidebar">
+
+        <div class="sidebarBrand" aria-label="BetterSide admin">
+            <img class="sidebarLogo" src="assets/company-logo.png" alt="BetterSide logo">
+            <div class="brandText">
+                <div class="brandCompany">Admin Panel</div>
+                <!-- <div class="brandRole"><span class="brandDot"></span> <span id="sidebarAdminName">Admin</span></div> -->
+            </div>
+        </div>
+
+        <ul>
+
+            <li class="menu active" data-page="dashboardPage">
+                Dashboard
+            </li>
+
+            <li class="menu" data-page="visitorPage">
+                Visitor Requests
+            </li>
+
+            <li class="menu" data-page="propertyPage">
+                Properties
+            </li>
+
+            <li class="menu" data-page="propertyRequestPage">
+                Property Requests
+            </li>
+
+            <li class="menu" data-page="statusPage">
+                Status Management
+            </li>
+
+            <li class="menu" data-page="settingsPage">
+                Settings
+            </li>
+
+        </ul>
+
+    </aside>
+
+    <!-- Main -->
+
+    <main class="main">
+
+        <!-- Header -->
+
+        <header class="header">
+
+            <div>
+
+                <h1 id="adminHeading">Dashboard</h1>
+
+                <!-- <p>Manage visitors and properties</p> -->
+
+            </div>
+
+            <div class="notification-wrap">
+                <button class="notification-btn" id="notificationBtn"
+                        type="button" aria-label="Visitor notifications"
+                        title="New visitor requests">
+                    &#128276;
+                    <span class="notification-badge" id="notificationBadge">0</span>
+                </button>
+
+                <div class="header-actions">
+                    <button class="logout">
+
+                        Logout
+
+                    </button>
+
+                    <button class="refresh-page-btn" id="refreshPageBtn" type="button">
+                        ↻ Refresh Page
+                    </button>
+                </div>
+            </div>
+
+        </header>
+
+        <!-- Cards -->
+
+        <div id="dashboardPage" class="page active">
+
+            <section class="cards">
+
+                <div class="card">
+
+                    <h3>Pending</h3>
+
+                    <h2 id="pendingCount">0</h2>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>Approved</h3>
+
+                    <h2 id="approvedCount">0</h2>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>Expired</h3>
+
+                    <h2 id="expiredCount">0</h2>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>Inventory</h3>
+
+                    <h2 id="propertyCount">0</h2>
+
+                </div>
+
+            </section>
+
+            <!-- Visitor Requests -->
+
+            <section class="section">
+
+                <div class="section-header">
+
+                    <h2>Visitor Requests</h2>
+
+                </div>
+
+                <div id="requestContainer">
+
+                    <!-- admin.js loads cards here -->
+
+                </div>
+
+            </section>
+        </div>
+
+        <section id="visitorPage" class="section page">
+
+            <div class="section-header">
+
+                <h2>Visitor Requests</h2>
+
+            </div>
+
+            <div id="visitorRequestPageContainer">
+
+            </div>
+
+        </section>
+        <!-- Categories -->
+
+        <section id="propertyPage" class="section page">
+
+            <div class="section-header">
+
+                <h2>Property Management</h2>
+
+                <input type="text" id="propertySearch" placeholder="Search property..." class="searchBox">
+
+            </div>
+
+            <div id="floorTabs" class="floorTabs">
+
+                <button class="floor active" data-floor="All">All</button>
+
+                <button class="floor" data-floor="LG">LG</button>
+
+                <button class="floor" data-floor="G">G</button>
+
+            </div>
+
+            <div id="floorStats" class="floorStats">
+
+                <div class="stat">
+                    <span>Total</span>
+                    <h3 id="floorTotal">0</h3>
+                </div>
+
+                <div class="stat">
+                    <span>Available</span>
+                    <h3 id="floorAvailable">0</h3>
+                </div>
+
+                <div class="stat">
+                    <span>Reserved</span>
+                    <h3 id="floorReserved">0</h3>
+                </div>
+
+                <div class="stat">
+                    <span>Sold</span>
+                    <h3 id="floorSold">0</h3>
+
+                </div>
+
+            </div>
+
+            <div class="table-wrap">
+            <table class="propertyTable">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Floor</th>
+                        <th>Property</th>
+                        <th>Unit</th>
+                        <th>Area</th>
+                        <th>Status</th>
+                        <th>Buyer Information</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="propertyTable">
+
+                </tbody>
+
+            </table>
+            </div>
+            <div class="table-actions">
+
+                <button id="cancelChanges" class="cancel-btn">
+                    Cancel
+                </button>
+
+                <button id="saveChanges" class="save-btn">
+                    Save Changes
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <section id="statusPage" class="section page">
+            <div class="section-header">
+                <div>
+                    <h2>Status Management</h2>
+                    <p>Create, edit and delete unit statuses and their colors.</p>
+                </div>
+            </div>
+
+            <div class="status-manager">
+                <div class="status-form">
+                    <h3 id="statusFormTitle">Create Status</h3>
+
+                    <label for="statusName">Status name</label>
+                    <input id="statusName" type="text" placeholder="e.g. Available">
+
+                    <label for="statusColor">Status color</label>
+                    <div class="status-color-row">
+                        <input id="statusColor" type="color" value="#22c55e">
+                        <span id="statusColorValue">#22C55E</span>
+                    </div>
+
+                    <div class="status-form-actions">
+                        <button id="statusCancelBtn" type="button">Cancel</button>
+                        <button id="statusSaveBtn" type="button">Create Status</button>
+                    </div>
+
+                    <div id="statusMessage" class="status-message"></div>
+                </div>
+
+                <div class="status-list">
+                    <h3>Current Statuses</h3>
+                    <div id="statusList">
+                        <p>Loading statuses...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="settingsPage" class="section page">
+            <div class="section-header">
+                <div>
+                    <h2>Notification Settings</h2>
+                    <p>Control how new visitor request notifications behave on this admin panel.</p>
+                </div>
+            </div>
+
+            <div class="notification-settings">
+                <div class="notification-setting-card">
+                    <div class="notification-setting-row">
+                        <div>
+                            <div class="notification-setting-label">Visitor Notifications</div>
+                            <div class="notification-setting-help">Show the notification badge and popup for new visitor requests.</div>
+                        </div>
+                        <label class="notification-toggle">
+                            <input type="checkbox" id="visitorNotificationEnabled" checked>
+                            <span class="notification-toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="notification-setting-row">
+                        <div>
+                            <div class="notification-setting-label">Notification Sound</div>
+                            <div class="notification-setting-help">Play a bell sound when a new visitor request arrives.</div>
+                        </div>
+                        <label class="notification-toggle">
+                            <input type="checkbox" id="notificationSoundEnabled" checked>
+                            <span class="notification-toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="notification-setting-row">
+                        <div>
+                            <div class="notification-setting-label">Volume</div>
+                            <div class="notification-setting-help">Choose how loud the notification bell should be.</div>
+                        </div>
+                        <div class="notification-volume-wrap">
+                            <input id="notificationVolume" type="range" min="0" max="100" value="30">
+                            <span id="notificationVolumeValue">30%</span>
+                        </div>
+                    </div>
+
+                    <div class="notification-setting-row">
+                        <div>
+                            <div class="notification-setting-label">Test Sound</div>
+                            <div class="notification-setting-help">Use this button to hear the current notification volume.</div>
+                        </div>
+                        <button id="testNotificationSound" class="notification-test-btn" type="button">
+                            🔊 Test Sound
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="propertyRequestPage" class="section page">
+
+            <div class="section-header">
+
+                <h2>Property Requests</h2>
+
+            </div>
+
+            <div class="table-wrap">
+            <table class="propertyTable">
+
+                <thead>
+
+                    <tr>
+
+                        <th>Visitor</th>
+                        <th>Phone</th>
+                        <th>Floor</th>
+                        <th>Property</th>
+                        <th>Unit</th>
+                        <th>Requested</th>
+                        <th>Action</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody id="propertyRequestTable">
+
+                </tbody>
+
+            </table>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script type="module" src="js/auth-guard.js"></script>
+
+    <script>
+
+        const menus = document.querySelectorAll(".menu");
+        const pages = document.querySelectorAll(".page");
+
+        menus.forEach(menu => {
+
+            menu.onclick = () => {
+
+                menus.forEach(m => m.classList.remove("active"));
+
+                menu.classList.add("active");
+
+                pages.forEach(page => page.classList.remove("active"));
+
+                const page = document.getElementById(menu.dataset.page);
+
+                if (page) {
+
+                    page.classList.add("active");
+
+                }
+
+                closeSidebar();
+
+            }
+
+        });
+
+        /* ---- mobile drawer ---- */
+
+        const sidebar = document.getElementById("sidebar");
+        const menuToggle = document.getElementById("menuToggle");
+        const sidebarOverlay = document.getElementById("sidebarOverlay");
+
+        function openSidebar() {
+            sidebar.classList.add("open");
+            sidebarOverlay.classList.add("show");
+        }
+
+        function closeSidebar() {
+            sidebar.classList.remove("open");
+            sidebarOverlay.classList.remove("show");
+        }
+
+        menuToggle.addEventListener("click", () => {
+            sidebar.classList.contains("open") ? closeSidebar() : openSidebar();
+        });
+
+        sidebarOverlay.addEventListener("click", closeSidebar);
+
+        window.addEventListener("resize", () => {
+            if (window.innerWidth > 900) closeSidebar();
+        });
+
+    </script>
+    <script type="module" src="js/admin.js"></script>
+    <script type="module">
+        // Show the currently logged-in admin name and Supabase user ID.
+        if (window.__adminReady) {
+            const ready = await window.__adminReady;
+
+            if (ready) {
+                const admin = window.__adminUser;
+
+                if (admin) {
+                    const heading = document.getElementById("adminHeading");
+
+                    if (heading) {
+                        heading.innerHTML = `
+                            ${escapeAdminText(admin.name) || "Admin"}
+                            <div class="admin-identity">
+                                <span>User ID: ${escapeAdminText(admin.id)}</span>
+                            </div>
+                        `;
+                    }
+
+                    const sidebarAdminName = document.getElementById("sidebarAdminName");
+                    if (sidebarAdminName) {
+                        sidebarAdminName.textContent = escapeAdminText(admin.name) || "Admin";
+                    }
+                }
+            }
+        }
+
+        function escapeAdminText(value) {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+
+    <script type="module">
+        import { supabase } from "./js/supabase.js";
+
+        document.querySelector(".logout")?.addEventListener("click", async () => {
+            await supabase.auth.signOut();
+            window.location.href = "login.html";
+        });
+    </script>
+
+    <div class="notification-toast" id="notificationToast" role="status" aria-live="polite">
+        <button class="notification-toast-close" id="notificationToastClose" type="button" aria-label="Close">&times;</button>
+        <div class="notification-toast-title">New Visitor Request</div>
+        <div class="notification-toast-text" id="notificationToastText">
+            A new visitor request has arrived.
+        </div>
+        <button class="notification-toast-action" id="notificationToastAction" type="button">
+            View Visitor Requests
+        </button>
+    </div>
+
+
+    <script type="module">
+        /* =========================================================
+           Visitor request notifications
+           - 🔔 bell + unread count
+           - 🔊 bell sound
+           - browser notification when tab is hidden
+           - tab-title notification: (1) New Visitor Request
+           - Supabase Realtime INSERT listener
+        ========================================================= */
+        import { supabase } from "./js/supabase.js";
+
+        const notificationBtn = document.getElementById("notificationBtn");
+        const notificationBadge = document.getElementById("notificationBadge");
+        const notificationToast = document.getElementById("notificationToast");
+        const notificationToastText = document.getElementById("notificationToastText");
+        const notificationToastClose = document.getElementById("notificationToastClose");
+        const notificationToastAction = document.getElementById("notificationToastAction");
+
+        let unreadVisitorNotifications = 0;
+        let toastTimer = null;
+        let titleTimer = null;
+        let titleBase = document.title || "Admin Panel";
+        let audioContext = null;
+        let audioUnlocked = false;
+
+        const NOTIFICATION_SETTINGS_KEY = "adminNotificationSettings";
+
+        const defaultNotificationSettings = {
+            notificationsEnabled: true,
+            soundEnabled: true,
+            volume: 30
+        };
+
+        let notificationSettings = loadNotificationSettings();
+
+        function loadNotificationSettings() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(NOTIFICATION_SETTINGS_KEY) || "{}");
+                return {
+                    ...defaultNotificationSettings,
+                    ...saved
+                };
+            } catch {
+                return { ...defaultNotificationSettings };
+            }
+        }
+
+        function saveNotificationSettings() {
+            localStorage.setItem(
+                NOTIFICATION_SETTINGS_KEY,
+                JSON.stringify(notificationSettings)
+            );
+        }
+
+        function syncNotificationSettingsUI() {
+            const enabled = document.getElementById("visitorNotificationEnabled");
+            const sound = document.getElementById("notificationSoundEnabled");
+            const volume = document.getElementById("notificationVolume");
+            const volumeValue = document.getElementById("notificationVolumeValue");
+
+            if (enabled) enabled.checked = !!notificationSettings.notificationsEnabled;
+            if (sound) sound.checked = !!notificationSettings.soundEnabled;
+            if (volume) volume.value = Number(notificationSettings.volume);
+            if (volumeValue) volumeValue.textContent = `${Number(notificationSettings.volume)}%`;
+        }
+
+        function setupNotificationSettingsUI() {
+            const enabled = document.getElementById("visitorNotificationEnabled");
+            const sound = document.getElementById("notificationSoundEnabled");
+            const volume = document.getElementById("notificationVolume");
+            const volumeValue = document.getElementById("notificationVolumeValue");
+            const test = document.getElementById("testNotificationSound");
+
+            syncNotificationSettingsUI();
+
+            enabled?.addEventListener("change", () => {
+                notificationSettings.notificationsEnabled = enabled.checked;
+                saveNotificationSettings();
+            });
+
+            sound?.addEventListener("change", () => {
+                notificationSettings.soundEnabled = sound.checked;
+                saveNotificationSettings();
+            });
+
+            volume?.addEventListener("input", () => {
+                notificationSettings.volume = Number(volume.value);
+                if (volumeValue) volumeValue.textContent = `${notificationSettings.volume}%`;
+                saveNotificationSettings();
+            });
+
+            test?.addEventListener("click", () => {
+                unlockNotificationSound();
+                playBellSound(true);
+            });
+        }
+
+        setupNotificationSettingsUI();
+
+        /* ---------- Sound ---------- */
+        function unlockNotificationSound() {
+            try {
+                if (!audioContext) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (!AudioCtx) return;
+                    audioContext = new AudioCtx();
+                }
+
+                if (audioContext.state === "suspended") {
+                    audioContext.resume();
+                }
+
+                audioUnlocked = true;
+            } catch (error) {
+                console.warn("Notification sound could not be unlocked:", error);
+            }
+        }
+
+        // Browsers only allow audio after user interaction.
+        window.addEventListener("pointerdown", unlockNotificationSound, { once: true });
+        window.addEventListener("keydown", unlockNotificationSound, { once: true });
+
+        function playBellSound(forceTest = false) {
+            if (!audioUnlocked || !audioContext) return;
+            if (!forceTest && !notificationSettings.soundEnabled) return;
+
+            try {
+                if (audioContext.state === "suspended") {
+                    audioContext.resume();
+                }
+
+                const now = audioContext.currentTime;
+                const master = audioContext.createGain();
+                const volume = Math.max(0, Math.min(100, Number(notificationSettings.volume))) / 100;
+
+                master.gain.setValueAtTime(0.0001, now);
+                master.gain.exponentialRampToValueAtTime(
+                    Math.max(0.0001, 0.22 * volume),
+                    now + 0.015
+                );
+                master.gain.exponentialRampToValueAtTime(0.0001, now + 1.05);
+                master.connect(audioContext.destination);
+
+                [880, 1174].forEach((frequency, index) => {
+                    const osc = audioContext.createOscillator();
+                    const gain = audioContext.createGain();
+                    const offset = index * 0.035;
+
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(frequency, now + offset);
+                    gain.gain.setValueAtTime(0.0001, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(
+                        Math.max(0.0001, 0.75 * volume),
+                        now + offset + 0.01
+                    );
+                    gain.gain.exponentialRampToValueAtTime(
+                        0.0001,
+                        now + offset + 0.95
+                    );
+
+                    osc.connect(gain);
+                    gain.connect(master);
+                    osc.start(now + offset);
+                    osc.stop(now + 1.05);
+                });
+            } catch (error) {
+                console.warn("Notification bell sound failed:", error);
+            }
+        }
+
+        /* ---------- Badge ---------- */
+        function updateNotificationBadge() {
+            if (!notificationBadge) return;
+
+            if (unreadVisitorNotifications > 0) {
+                notificationBadge.textContent =
+                    unreadVisitorNotifications > 99 ? "99+" : String(unreadVisitorNotifications);
+                notificationBadge.style.display = "block";
+            } else {
+                notificationBadge.style.display = "none";
+            }
+        }
+
+        /* ---------- Browser tab title ---------- */
+        function startTabNotification() {
+            clearInterval(titleTimer);
+
+            let showAlertTitle = true;
+            titleTimer = setInterval(() => {
+                if (document.hidden) {
+                    document.title = showAlertTitle
+                        ? `🔔 (${unreadVisitorNotifications}) New Visitor Request`
+                        : titleBase;
+                    showAlertTitle = !showAlertTitle;
+                } else {
+                    document.title = `🔔 ${unreadVisitorNotifications} New Visitor Request`;
+                }
+            }, 1000);
+        }
+
+        function clearTabNotification() {
+            clearInterval(titleTimer);
+            titleTimer = null;
+            document.title = titleBase;
+        }
+
+        document.addEventListener("visibilitychange", () => {
+            if (!document.hidden && unreadVisitorNotifications === 0) {
+                clearTabNotification();
+            } else if (document.hidden && unreadVisitorNotifications > 0) {
+                startTabNotification();
+            }
+        });
+
+        /* ---------- Browser permission ---------- */
+        async function enableBrowserNotifications() {
+            if (!("Notification" in window)) return;
+            if (Notification.permission !== "default") return;
+
+            try {
+                await Notification.requestPermission();
+            } catch (error) {
+                console.warn("Notification permission request failed:", error);
+            }
+        }
+
+        // Ask after the admin interacts with the page, so the browser is allowed
+        // to show the permission prompt. This is intentionally not automatic on load.
+        window.addEventListener("pointerdown", enableBrowserNotifications, { once: true });
+
+        /* ---------- Show notification ---------- */
+        function showVisitorNotification(visitor = {}) {
+            if (!notificationSettings.notificationsEnabled) return;
+
+            unreadVisitorNotifications += 1;
+            updateNotificationBadge();
+            playBellSound();
+            startTabNotification();
+
+            const visitorName =
+                visitor.name ||
+                visitor.full_name ||
+                visitor.visitor_name ||
+                "A visitor";
+
+            if (notificationToastText) {
+                notificationToastText.textContent =
+                    `${visitorName} has submitted a new visitor request.`;
+            }
+
+            notificationToast?.classList.add("show");
+
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                notificationToast?.classList.remove("show");
+            }, 8000);
+
+            // Browser-level notification when admin is on another tab/window.
+            if (
+                document.hidden &&
+                "Notification" in window &&
+                Notification.permission === "granted"
+            ) {
+                try {
+                    const browserNotification = new Notification("New Visitor Request", {
+                        body: `${visitorName} has submitted a new visitor request.`,
+                        icon: "assets/company-logo.png",
+                        tag: "new-visitor-request",
+                        renotify: true
+                    });
+
+                    browserNotification.onclick = () => {
+                        window.focus();
+                        browserNotification.close();
+                    };
+                } catch (error) {
+                    console.warn("Browser notification failed:", error);
+                }
+            }
+        }
+
+        /* ---------- Clear notifications ---------- */
+        function clearVisitorNotifications() {
+            unreadVisitorNotifications = 0;
+            updateNotificationBadge();
+            notificationToast?.classList.remove("show");
+            clearTabNotification();
+        }
+
+        notificationBtn?.addEventListener("click", async () => {
+            unlockNotificationSound();
+            await enableBrowserNotifications();
+            clearVisitorNotifications();
+
+            const visitorMenu = document.querySelector('.menu[data-page="visitorPage"]');
+            visitorMenu?.click();
+        });
+
+        notificationToastClose?.addEventListener("click", clearVisitorNotifications);
+
+        notificationToastAction?.addEventListener("click", () => {
+            clearVisitorNotifications();
+            const visitorMenu = document.querySelector('.menu[data-page="visitorPage"]');
+            visitorMenu?.click();
+        });
+
+        /* ---------- Supabase Realtime ---------- */
+        const visitorNotificationChannel = supabase
+            .channel("admin-visitor-request-notifications")
+            .on(
+                "postgres_changes",
+                {
+                    event: "INSERT",
+                    schema: "public",
+                    table: "visitors"
+                },
+                (payload) => {
+                    console.log("New visitor request received:", payload.new);
+                    showVisitorNotification(payload?.new || {});
+                }
+            )
+            .subscribe((status) => {
+                console.log("Visitor notification channel:", status);
+
+                if (status === "SUBSCRIBED") {
+                    console.log("✅ Visitor request notifications connected.");
+                } else if (status === "CHANNEL_ERROR") {
+                    console.error("❌ Visitor request notification channel error.");
+                } else if (status === "TIMED_OUT") {
+                    console.warn("⚠️ Visitor request notification channel timed out.");
+                }
+            });
+
+        window.addEventListener("beforeunload", () => {
+            supabase.removeChannel(visitorNotificationChannel);
+        });
+    </script>
+
+
+    <script>
+        document.getElementById("refreshPageBtn")?.addEventListener("click", () => {
+            window.location.reload();
+        });
+    </script>
+
+</body>
+
+</html>

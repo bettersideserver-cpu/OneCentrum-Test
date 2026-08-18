@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Login</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Segoe UI, sans-serif;
+    }
+
+    body {
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f4f6fb;
+    }
+
+    .container {
+      width: 380px;
+      background: #fff;
+      padding: 35px;
+      border-radius: 15px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, .1);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 13px;
+      background: #2563eb;
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background .2s ease;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #93b4f0;
+      cursor: not-allowed;
+    }
+
+    /* ===== Loading Spinner ===== */
+    .btn-spinner {
+      display: none;
+      width: 18px;
+      height: 18px;
+      border: 3px solid rgba(255, 255, 255, .4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    button.loading .btn-spinner {
+      display: inline-block;
+    }
+
+    button.loading .btn-text {
+      opacity: .7;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .switch {
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .switch a {
+      cursor: pointer;
+      color: #2563eb;
+      text-decoration: none;
+    }
+
+    #registerForm {
+      display: none;
+    }
+
+    #error {
+      margin-top: 15px;
+      text-align: center;
+      color: red;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h2>Admin Panel</h2>
+    <p id="error"></p>
+
+    <!-- LOGIN -->
+    <div id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Email Address">
+      <input type="password" id="loginPassword" placeholder="Password">
+      <button id="loginBtn" type="button">
+        <span class="btn-text">Login</span>
+        <span class="btn-spinner"></span>
+      </button>
+      <p>Don't have an account? <a href="#" id="showRegister">Register</a></p>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="registerForm" style="display:none;">
+      <input type="text" id="registerName" placeholder="Full Name">
+      <input type="email" id="registerEmail" placeholder="Email Address">
+      <input type="password" id="registerPassword" placeholder="Password">
+      <button id="registerBtn" type="button">
+        <span class="btn-text">Create Account</span>
+        <span class="btn-spinner"></span>
+      </button>
+      <p class="switch">Already have an account? <a href="#" id="showLogin">Login</a></p>
+    </div>
+  </div>
+
+  <script>
+    // Helper: toggle loading state on any button.
+    // Usage: setBtnLoading(loginBtn, true)  -> shows spinner, disables button
+    //        setBtnLoading(loginBtn, false) -> restores normal state
+    function setBtnLoading(btn, isLoading) {
+      if (!btn) return;
+      btn.disabled = isLoading;
+      btn.classList.toggle('loading', isLoading);
+    }
+    window.setBtnLoading = setBtnLoading;
+
+    // Wire up the spinner on click. auth.js should call
+    // setBtnLoading(btn, false) once the login/register request finishes
+    // (success or error) to remove the spinner again.
+    var loginBtn = document.getElementById('loginBtn');
+    var registerBtn = document.getElementById('registerBtn');
+    var errorEl = document.getElementById('error');
+
+    loginBtn.addEventListener('click', function () {
+      setBtnLoading(this, true);
+      armAutoReset(this);
+    });
+
+    registerBtn.addEventListener('click', function () {
+      setBtnLoading(this, true);
+      armAutoReset(this);
+    });
+
+    // Fix: stop the spinner as soon as an error message appears
+    // (covers the case where auth.js only shows an error and never
+    // calls setBtnLoading itself).
+    var errorObserver = new MutationObserver(function () {
+      if (errorEl.textContent.trim() !== '') {
+        setBtnLoading(loginBtn, false);
+        setBtnLoading(registerBtn, false);
+      }
+    });
+    errorObserver.observe(errorEl, { childList: true, characterData: true, subtree: true });
+
+    // Safety net: if nothing resets the button within 8s (e.g. network
+    // hang), stop the spinner anyway so the UI never gets stuck.
+    function armAutoReset(btn) {
+      clearTimeout(btn._resetTimer);
+      btn._resetTimer = setTimeout(function () {
+        setBtnLoading(btn, false);
+      }, 8000);
+    }
+
+    document.getElementById('showRegister').addEventListener('click', function (e) {
+      e.preventDefault();
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('registerForm').style.display = 'block';
+    });
+
+    document.getElementById('showLogin').addEventListener('click', function (e) {
+      e.preventDefault();
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('loginForm').style.display = 'block';
+    });
+  </script>
+
+  <script type="module" src="js/auth.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Floor 11</title>
+
+
+    <link rel="stylesheet" href="../styles.css">
+</head>
+
+<body>
+    <img id="floorImage" src="" alt="Floor">
+    <script src="../../../js/floorLoader.js"></script>
+    <style>
+        /* =====================================
+   RESET
+===================================== */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #111;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .unit {
+            fill: transparent;
+            stroke: transparent;
+            cursor: pointer;
+            pointer-events: all;
+            transition: .2s;
+        }
+
+        .unit:hover {
+            fill: rgba(37, 99, 235, .35);
+        }
+
+
+
+        /* =====================================
+   CONTAINER
+===================================== */
+
+        .floor-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* =====================================
+   FLOOR IMAGE
+===================================== */
+
+        #floorImage {
+            position: absolute;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            object-fit: contain;
+
+            user-select: none;
+            pointer-events: none;
+        }
+
+        /* =====================================
+   SVG
+===================================== */
+
+        #floorSVG {
+            position: absolute;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            z-index: 10;
+        }
+
+        /* =====================================
+   CLICKABLE AREAS
+===================================== */
+
+        #floorSVG path {
+
+            fill: rgba(255, 255, 255, 0.001);
+
+            stroke: transparent;
+
+            stroke-width: 3;
+
+            cursor: pointer;
+
+            transition:
+                fill .25s ease,
+                stroke .25s ease,
+                filter .25s ease,
+                transform .25s ease;
+
+        }
+
+        /* =====================================
+   HOVER
+===================================== */
+
+        #floorSVG path:hover {
+
+            fill: rgba(255, 215, 0, .35);
+
+            stroke: #FFD700;
+
+            filter:
+                drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 20px #FFD700);
+
+        }
+@media (max-width: 768px) and (orientation: portrait) {
+    #floorNav,
+    .floor-nav,
+    #floorSelector,
+    .floor-switcher {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 20px !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        z-index: 200 !important;
+    }
+}
+  
+        /* =====================================
+   CLICK
+===================================== */
+
+        #floorSVG path:active {
+
+            fill: rgba(255, 215, 0, .6);
+
+        }
+
+        /* =====================================
+   OPTIONAL BACK BUTTON
+===================================== */
+
+        .back-btn {
+
+            position: absolute;
+
+            top: 30px;
+            left: 30px;
+
+            padding: 12px 24px;
+
+            background: white;
+
+            color: black;
+
+            text-decoration: none;
+
+            border-radius: 10px;
+
+            z-index: 100;
+
+            font-weight: 600;
+
+        }
+
+        /* =====================================
+           MOBILE ONLY
+           Desktop/tablet styles remain unchanged.
+        ===================================== */
+
+        @media (max-width: 768px) {
+            .floor-container {
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
+            }
+
+            #floorImage,
+            #floorSVG {
+                width: 100%;
+                height: 100%;
+            }
+
+            header {
+                padding: 10px 14px;
+            }
+
+            header h1 {
+                font-size: 16px;
+                margin-bottom: 5px;
+            }
+
+            #legend {
+                gap: 10px;
+                font-size: 11px;
+                flex-wrap: wrap;
+            }
+
+            .back-btn {
+                top: 8px;
+                left: 8px;
+                padding: 7px 13px;
+                font-size: 12px;
+                border-radius: 8px;
+            }
+
+            #tooltip {
+                padding: 7px 10px;
+                font-size: 11px;
+                max-width: 80vw;
+            }
+
+            #timer {
+                top: 52px;
+                right: 8px;
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            #popupContainer .card,
+            #popupContainer .overlay > div,
+            .card {
+                width: min(420px, 92vw);
+                max-height: 88vh;
+                overflow-y: auto;
+                padding: 16px 18px;
+            }
+
+            #popupContainer h2,
+            .card h2 {
+                font-size: 18px;
+                margin-bottom: 10px;
+            }
+
+            #popupContainer input,
+            .card input {
+                padding: 9px 12px;
+                margin-bottom: 9px;
+                font-size: 16px;
+            }
+
+            #popupContainer button,
+            .card button {
+                padding: 10px;
+                font-size: 15px;
+            }
+
+            .holdActions {
+                gap: 10px;
+                margin-top: 12px;
+            }
+
+            .secondaryBtn,
+            .primaryBtn {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+        }
+
+        /* MOBILE LANDSCAPE */
+        @media (orientation: landscape) and (max-height: 500px) {
+
+            .floor-container {
+                position: fixed;
+                inset: 0;
+                width: auto;
+                height: auto;
+                padding: 30px 66px 8px 8px;
+            }
+
+            header {
+                position: relative;
+                z-index: 120;
+                padding: 5px 12px;
+            }
+
+            header h1 {
+                font-size: 14px;
+                margin-bottom: 0;
+            }
+
+            #legend {
+                gap: 10px;
+                font-size: 10px;
+            }
+
+            #floorSVG path {
+                stroke-width: 5;
+            }
+
+            #floorSVG path:hover,
+            #floorSVG path:active {
+                fill: rgba(255, 215, 0, .4);
+                stroke: #FFD700;
+                filter: drop-shadow(0 0 6px #FFD700);
+            }
+
+            .back-btn {
+                top: 8px;
+                left: 8px;
+                padding: 7px 13px;
+                font-size: 12px;
+                border-radius: 8px;
+            }
+
+            #timer {
+                top:  48px;
+                right: 66px;
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            #tooltip {
+                padding: 7px 10px;
+                font-size: 11px;
+                max-width: 55vw;
+            }
+
+            #floorNav,
+            .floor-nav,
+            #floorSelector,
+            .floor-switcher {
+                top: 50% !important;
+                right: 6px !important;
+                bottom: auto !important;
+                left: auto !important;
+                transform: translateY(-50%) !important;
+                padding: 6px !important;
+                border-radius: 12px !important;
+                gap: 5px !important;
+                zoom: .8;
+            }
+
+            #popupContainer .card,
+            #popupContainer .overlay > div,
+            .card {
+                width: min(420px, 92vw);
+                max-height: 88vh;
+                overflow-y: auto;
+                padding: 16px 18px;
+            }
+
+            #popupContainer h2,
+            .card h2 {
+                font-size: 18px;
+                margin-bottom: 10px;
+            }
+
+            #popupContainer input,
+            .card input {
+                padding: 9px 12px;
+                margin-bottom: 9px;
+                font-size: 16px;
+            }
+
+            #popupContainer button,
+            .card button {
+                padding: 10px;
+                font-size: 15px;
+            }
+
+            .holdActions {
+                gap: 10px;
+                margin-top: 12px;
+            }
+
+            .secondaryBtn,
+            .primaryBtn {
+                padding: 10px 18px;
+                font-size: 14px;
+            }
+        }
+
+        /* VERY SHORT LANDSCAPE */
+        @media (orientation: landscape) and (max-height: 380px) {
+
+            .floor-container {
+                padding: 26px 56px 6px 6px;
+            }
+
+            .back-btn {
+                padding: 6px 11px;
+                font-size: 11px;
+            }
+
+            #floorNav,
+            .floor-nav,
+            #floorSelector,
+            .floor-switcher {
+                zoom: .7;
+            }
+        }
+/* ==========================================
+   PORTRAIT MOBILE - CENTER FLOOR IMAGE
+========================================== */
+
+@media screen and (max-width: 768px) and (orientation: portrait) {
+
+    html,
+    body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .floor-container {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        overflow: hidden !important;
+    }
+
+    #floorImage,
+    #floorSVG {
+        position: absolute;
+        inset: 0;
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    #floorImage {
+        object-fit: contain !important;
+        object-position: center center !important;
+    }
+
+    #floorSVG {
+        z-index: 10;
+    }
+
+    header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 120;
+    }
+}header h1 {
+    display: none !important;
+}
+    </style>
+
+    <header>
+        <h1>Interactive Floor Plan</h1>
+        <div id="legend"></div>
+    </header>
+    <div id="timer">
+        00:00
+    </div>
+    <div id="tooltip"></div>
+    <div class="floor-container">
+
+        <!-- Floor Plan Image -->
+        <img src="Floor-11.png" id="floorImage" alt="Floor Plan">
+
+        <!-- SVG Overlay -->
+        <svg id="floorSVG" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4967 2341"
+            preserveAspectRatio="xMidYMid meet">
+            <path id="11_PresidentialOffice_1101" class="unit" d="M2359.89 1226v234h684v-316H2483.5v80z" class="st0" />
+            <path id="11_PresidentialOffice_1102" class="unit" d="M3043.89 1144h652.67v316h-652.67z" class="st0" />
+            <path id="11_PresidentialOffice_1103" class="unit"
+                d="M3043.89 881.33s-2 172.67 0 172.67h95.33v90h557.33V881.33h-652.67Z" class="st0" />
+            <path id="11_PresidentialOffice_1104" class="unit"
+                d="M897.22 881.33v579.33h316v-459.33h79.33v-120s-394.33-1-395.33 0" class="st0" />
+            <path id="11_PresidentialOffice_1105" class="unit" d="M1213.22 1191.33h640v269.33h-640z" class="st0" />
+
+
+
+
+        </svg>
+
+    </div>
+    <script>
+        window.unitDetails = {
+
+            "11_PresidentialOffice_1101": {
+                unit: "Presidential Office 1101",
+                superArea: "2,576 sq.ft",
+                carpetArea: "1,288 sq.ft"
+            },
+
+            "11_PresidentialOffice_1102": {
+                unit: "Presidential Office 1102",
+                superArea: "2,504 sq.ft",
+                carpetArea: "1,252 sq.ft"
+            },
+
+            "11_PresidentialOffice_1103": {
+                unit: "Presidential Office 1103",
+                superArea: "2,096 sq.ft",
+                carpetArea: "1,048 sq.ft"
+            },
+
+            "11_PresidentialOffice_1104": {
+                unit: "Presidential Office 1104",
+                superArea: "2,432 sq.ft",
+                carpetArea: "1,216 sq.ft"
+            },
+
+            "11_PresidentialOffice_1105": {
+                unit: "Presidential Office 1105",
+                superArea: "2,152 sq.ft",
+                carpetArea: "1,076 sq.ft"
+            }
+
+        };
+    </script>
+
+   <div id="popupContainer"></div>
+
+    <script>
+        fetch("../hold.html")
+            .then(r => r.text())
+            .then(html => {
+
+                document.getElementById("popupContainer").innerHTML = html;
+
+            });
+    </script>
+
+    <script type="module" src="../../../js/database.js"></script>
+
+    <script type="module" src="../../../js/visitor.js"></script>
+
+
+    <script src="../floor-nav.js"></script>
+</body>
+
+</html>
