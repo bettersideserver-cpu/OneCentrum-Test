@@ -25,14 +25,28 @@ self.addEventListener("push", event => {
         badge: data.badge || "assets/company-logo.png",
         tag: data.tag || "new-visitor-request",
         renotify: true,
-        requireInteraction: false,
+        requireInteraction: true,
         data: {
             url: data.url || "./admin.html"
         },
         vibrate: [180, 90, 180]
     };
 
-    event.waitUntil(self.registration.showNotification(title, options));
+    event.waitUntil(
+        (async () => {
+            await self.registration.showNotification(title, options);
+
+            // If an admin tab is open but backgrounded, ask it to ring too.
+            const clientList = await self.clients.matchAll({
+                type: "window",
+                includeUncontrolled: true
+            });
+
+            for (const client of clientList) {
+                client.postMessage({ type: "play-bell" });
+            }
+        })()
+    );
 });
 
 self.addEventListener("notificationclick", event => {

@@ -9,6 +9,16 @@
 
     <title>Real Estate Admin</title>
 
+    <!-- Installable web app (required for push notifications on iPhone) -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Admin">
+    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+    <link rel="icon" href="./assets/icon-192.png">
+
     <style>
         * {
             margin: 0;
@@ -1795,6 +1805,23 @@
 
                     <div class="notification-setting-row">
                         <div>
+                            <div class="notification-setting-label">Phone Notifications</div>
+                            <div class="notification-setting-help">
+                                Get a system notification with sound on this phone, even when the
+                                admin app is closed. On iPhone you must first open this page in
+                                Safari and use Share &rarr; <b>Add to Home Screen</b>, then open it
+                                from the home screen and tap this button.
+                            </div>
+                            <div class="notification-setting-help" id="phoneNotificationStatus"
+                                 style="margin-top:6px;font-weight:600;"></div>
+                        </div>
+                        <button id="enablePhoneNotifications" class="notification-test-btn" type="button">
+                            📱 Enable On This Device
+                        </button>
+                    </div>
+
+                    <div class="notification-setting-row">
+                        <div>
                             <div class="notification-setting-label">Test Sound</div>
                             <div class="notification-setting-help">Use this button to hear the current notification volume.</div>
                         </div>
@@ -2370,6 +2397,142 @@
             if (event.data?.type === "play-bell") playBellSound();
         });
 
+        /* ---------- Phone / device notifications ----------
+         * iOS only delivers Web Push to a page that was installed via
+         * Share > Add to Home Screen and is running standalone, and it only
+         * accepts the permission prompt from a real tap. Android/Chrome is
+         * happy either way. The sound and vibration of a system notification
+         * are controlled by the phone, not by JavaScript - so no bell is
+         * played here; the OS rings.
+         */
+        const phoneNotificationStatus = document.getElementById("phoneNotificationStatus");
+        const enablePhoneNotificationsBtn = document.getElementById("enablePhoneNotifications");
+
+        function isIosDevice() {
+            return (
+                /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+            );
+        }
+
+        function isStandaloneApp() {
+            return (
+                window.navigator.standalone === true ||
+                window.matchMedia("(display-mode: standalone)").matches ||
+                window.matchMedia("(display-mode: fullscreen)").matches
+            );
+        }
+
+        function setPhoneStatus(text, ok) {
+            if (!phoneNotificationStatus) return;
+            phoneNotificationStatus.textContent = text;
+            phoneNotificationStatus.style.color = ok ? "#16a34a" : "#dc2626";
+        }
+
+        function refreshPhoneStatus() {
+            if (!phoneNotificationStatus) return;
+
+            if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+                setPhoneStatus("This browser cannot show system notifications.", false);
+                return;
+            }
+
+            if (!window.isSecureContext) {
+                setPhoneStatus("Open the admin panel over HTTPS to enable phone notifications.", false);
+                return;
+            }
+
+            if (isIosDevice() && !isStandaloneApp()) {
+                setPhoneStatus(
+                    "iPhone: add this page to your Home Screen first, open it from there, then tap Enable.",
+                    false
+                );
+                return;
+            }
+
+            if (Notification.permission === "granted") {
+                setPhoneStatus("Notifications are allowed on this device.", true);
+            } else if (Notification.permission === "denied") {
+                setPhoneStatus(
+                    "Notifications are blocked. Allow them in the browser/app settings for this site.",
+                    false
+                );
+            } else {
+                setPhoneStatus("Not enabled yet on this device. Tap Enable.", false);
+            }
+        }
+
+        refreshPhoneStatus();
+
+        enablePhoneNotificationsBtn?.addEventListener("click", async () => {
+            if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+                setPhoneStatus("This browser cannot show system notifications.", false);
+                return;
+            }
+
+            if (!window.isSecureContext) {
+                setPhoneStatus("Phone notifications need an HTTPS address.", false);
+                return;
+            }
+
+            if (isIosDevice() && !isStandaloneApp()) {
+                setPhoneStatus(
+                    "iPhone: tap Share > Add to Home Screen, open the app from the home screen, then tap Enable again.",
+                    false
+                );
+                return;
+            }
+
+            enablePhoneNotificationsBtn.disabled = true;
+            setPhoneStatus("Enabling...", true);
+
+            try {
+                // Must run inside this tap for iOS to show the prompt.
+                let permission = Notification.permission;
+                if (permission === "default") {
+                    permission = await Notification.requestPermission();
+                }
+
+                if (permission !== "granted") {
+                    setPhoneStatus(
+                        "Permission was not granted. Allow notifications for this site and try again.",
+                        false
+                    );
+                    return;
+                }
+
+                await getServiceWorkerRegistration();
+
+                const result = await (window.enableBackgroundNotifications?.() ??
+                    Promise.resolve({ ok: false, message: "Push script did not load." }));
+
+                if (result?.ok) {
+                    setPhoneStatus(
+                        "Enabled. This device will get a notification with sound for every new request.",
+                        true
+                    );
+                } else {
+                    setPhoneStatus(
+                        `Notifications will show while the app is open. Background push not active: ${
+                            result?.message || "unknown reason"
+                        }`,
+                        false
+                    );
+                }
+
+                // Immediate proof, using the phone's own notification sound.
+                await showSystemNotification(
+                    "Notifications enabled",
+                    "This is how a new visitor request will look and sound."
+                );
+            } catch (error) {
+                console.error("Enable phone notifications failed:", error);
+                setPhoneStatus(`Could not enable: ${error?.message || error}`, false);
+            } finally {
+                enablePhoneNotificationsBtn.disabled = false;
+            }
+        });
+
         /* ---------- Badge ---------- */
         function updateNotificationBadge() {
             if (!notificationBadge) return;
@@ -2636,35 +2799,32 @@
 
         async function registerWebPush() {
             if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-                console.warn("Web Push is not supported by this browser.");
-                return;
+                return {
+                    ok: false,
+                    message: "this browser does not support Web Push (on iPhone, install the app to the Home Screen first)"
+                };
             }
 
             if (!window.isSecureContext) {
-                console.warn("Web Push requires HTTPS (localhost is also allowed for testing).");
-                return;
+                return { ok: false, message: "the site must be served over HTTPS" };
             }
 
             if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith("REPLACE_")) {
-                console.warn("Web Push is not configured yet. Add your VAPID public key to admin.html.");
-                return;
+                return { ok: false, message: "the VAPID public key is not configured in admin.html" };
             }
 
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) return { ok: false, message: "no admin is signed in" };
 
-            const registration = await navigator.serviceWorker.register("./service-worker.js", {
-                scope: "./"
-            });
+            const registration =
+                (await navigator.serviceWorker.getRegistration("./")) ||
+                (await navigator.serviceWorker.register("./service-worker.js", { scope: "./" }));
 
-            let permission = Notification.permission;
-            if (permission === "default") {
-                permission = await Notification.requestPermission();
-            }
+            await navigator.serviceWorker.ready;
 
-            if (permission !== "granted") {
-                console.warn("Browser notifications are not permitted.");
-                return;
+            // Never prompt outside a user gesture - iOS silently rejects that.
+            if (Notification.permission !== "granted") {
+                return { ok: false, message: "notification permission has not been granted yet" };
             }
 
             let subscription = await registration.pushManager.getSubscription();
@@ -2678,7 +2838,7 @@
 
             const json = subscription.toJSON();
 
-            await supabase
+            const { error } = await supabase
                 .from("push_subscriptions")
                 .upsert({
                     user_id: user.id,
@@ -2689,7 +2849,12 @@
                     onConflict: "endpoint"
                 });
 
+            if (error) {
+                return { ok: false, message: `could not save the subscription (${error.message})` };
+            }
+
             console.log("Web Push subscription registered.");
+            return { ok: true, message: "subscribed" };
         }
 
         // Reachable from the notification script so the subscription can be
@@ -2697,18 +2862,16 @@
         window.enableBackgroundNotifications = () =>
             registerWebPush().catch(error => {
                 console.error("Web Push registration failed:", error);
+                return { ok: false, message: String(error?.message || error) };
             });
 
-        // Do not block the admin page if push setup fails.
-        window.enableBackgroundNotifications();
-
-        // Permission is often still "default" on the first load; try again as
-        // soon as the admin interacts with the page.
-        window.addEventListener("pointerdown", () => {
-            if (Notification.permission === "granted") {
-                window.enableBackgroundNotifications();
-            }
-        }, { once: true });
+        // Silently refresh/repair the subscription when permission already
+        // exists (page reload, new device token, reinstalled app).
+        if (window.Notification && Notification.permission === "granted") {
+            window.enableBackgroundNotifications().then(result => {
+                if (!result?.ok) console.warn("Web Push not active:", result?.message);
+            });
+        }
     </script>
 
 </body>
