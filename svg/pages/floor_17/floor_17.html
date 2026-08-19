@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Floor 17</title>
+<link rel="stylesheet" href="../styles.css">
+    
+
+</head>
+
+<body>
+    <img id="floorImage" src="" alt="Floor">
+    <script src="../../../js/floorLoader.js"></script>
+    <style>
+        /* =====================================
+   RESET
+===================================== */
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #111;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .unit {
+            fill: transparent;
+            stroke: transparent;
+            cursor: pointer;
+            pointer-events: all;
+            transition: .2s;
+        }
+
+        .unit:hover {
+            fill: rgba(37, 99, 235, .35);
+        }
+
+
+
+        /* =====================================
+   CONTAINER
+===================================== */
+
+        .floor-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* =====================================
+   FLOOR IMAGE
+===================================== */
+
+        #floorImage {
+            position: absolute;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            object-fit: contain;
+
+            user-select: none;
+            pointer-events: none;
+        }
+
+        /* =====================================
+   SVG
+===================================== */
+
+        #floorSVG {
+            position: absolute;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            z-index: 10;
+        }
+
+        /* =====================================
+   CLICKABLE AREAS
+===================================== */
+
+        #floorSVG path {
+
+            fill: rgba(255, 255, 255, 0.001);
+
+            stroke: transparent;
+
+            stroke-width: 3;
+
+            cursor: pointer;
+
+            transition:
+                fill .25s ease,
+                stroke .25s ease,
+                filter .25s ease,
+                transform .25s ease;
+
+        }
+
+        /* =====================================
+   HOVER
+===================================== */
+
+        #floorSVG path:hover {
+
+            fill: rgba(255, 215, 0, .35);
+
+            stroke: #FFD700;
+
+            filter:
+                drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 20px #FFD700);
+
+        }
+
+        /* =====================================
+   CLICK
+===================================== */
+
+        #floorSVG path:active {
+
+            fill: rgba(255, 215, 0, .6);
+
+        }
+
+        /* =====================================
+   OPTIONAL BACK BUTTON
+===================================== */
+
+        .back-btn {
+
+            position: absolute;
+
+            top: 30px;
+            left: 30px;
+
+            padding: 12px 24px;
+
+            background: white;
+
+            color: black;
+
+            text-decoration: none;
+
+            border-radius: 10px;
+
+            z-index: 100;
+
+            font-weight: 600;
+
+        }
+    </style>
+    
+   <header>
+        <h1>Interactive Floor Plan</h1>
+        <div id="legend"></div>
+    </header>
+    <div id="timer">
+        00:00
+    </div>
+    <div id="tooltip"></div>
+    <div class="floor-container">
+
+        <!-- Floor Plan Image -->
+        <img src="Ground.png" id="floorImage" alt="Floor Plan">
+
+        <!-- SVG Overlay -->
+        <svg id="floorSVG" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4967 2341"
+            preserveAspectRatio="xMidYMid meet">
+            <path id="17_BoutiqueOffice_1" class="unit"
+                d="M2359.78 1224.78v234.67h288v-314.22H2483.5v80s-125.06-1.78-123.72-.44Z" />
+
+            <path id="17_BoutiqueOffice_2" class="unit" d="M2647.78 1145.22h262.67v314.22h-262.67z" />
+
+            <path id="17_BoutiqueOffice_3" class="unit" d="M2910.44 1145.22h262.22v314.22h-262.22z" />
+
+            <path id="17_BoutiqueOffice_4" class="unit" d="M3172.67 1145.22v314.22h271.11V1143z" />
+
+            <path id="17_BoutiqueOffice_5" class="unit"
+                d="M3045.22 881.22v175.67h394V881.22h-133.66v-7.33h-38.34v7.67z" />
+
+            <path id="17_BoutiqueOffice_6" class="unit" d="M897.33 881.44H1292v175.67H897.33z" />
+
+            <path id="17_BoutiqueOffice_7" class="unit" d="M897.33 1144.78h216.44v316H897.33z" />
+
+            <path id="17_BoutiqueOffice_8" class="unit" d="M1113.78 1144.78h247.56v316h-247.56z" />
+
+            <path id="17_BoutiqueOffice_9" class="unit" d="M1361.33 1144.78h245.33v316h-245.33z" />
+
+            <path id="17_BoutiqueOffice_10" class="unit" d="M1606.67 1144.78h253.78v316h-253.78z" />
+
+        </svg>
+
+    </div>
+
+     
+
+
+    <script type="module" src="../../../js/database.js"></script>
+    
+    <script type="module" src="../../../js/visitor.js"></script>
+
+
+    <script src="../floor-nav.js"></script>
+</body>
+
+</html>

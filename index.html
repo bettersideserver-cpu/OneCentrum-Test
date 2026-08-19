@@ -14,6 +14,14 @@
       font-family: Segoe UI, Arial, sans-serif;
     }
 
+    :root {
+      /* ===== SINGLE PLACE TO CHANGE THE SVG HIGHLIGHT COLOUR ===== */
+      --hl: #7A4E29;
+      --hl-fill: rgba(217, 154, 0, .62);
+      --hl-fill-active: rgba(217, 154, 0, .82);
+      --hl-glow: rgba(228, 167, 11, 0.85);
+    }
+
     html,
     body {
       height: 100%;
@@ -64,12 +72,12 @@
 
     #buildingSVG path:hover {
 
-      fill: rgba(255, 215, 0, .35);
+      fill: var(--hl-fill);
 
-      stroke: #FFD700;
+      stroke: var(--hl);
 
       filter:
-        drop-shadow(0 0 8px #FFD700) drop-shadow(0 0 16px #FFD700);
+        drop-shadow(0 0 8px var(--hl-glow)) drop-shadow(0 0 16px var(--hl-glow));
 
     }
 
@@ -79,7 +87,7 @@
 
     #buildingSVG path:active {
 
-      fill: rgba(255, 215, 0, .6);
+      fill: var(--hl-fill-active);
 
     }
 
@@ -232,14 +240,14 @@
       #buildingSVG path.panel-active {
         opacity: 1;
         pointer-events: auto;
-        fill: rgba(255, 215, 0, .35);
-        stroke: #FFD700;
+        fill: var(--hl-fill);
+        stroke: var(--hl);
         stroke-width: 3;
-        filter: drop-shadow(0 0 8px #FFD700);
+        filter: drop-shadow(0 0 8px var(--hl-glow));
       }
 
       #buildingSVG path.panel-active:active {
-        fill: rgba(255, 215, 0, .6);
+        fill: var(--hl-fill-active);
       }
     }
 
@@ -816,14 +824,14 @@
       #buildingSVG path.panel-active {
         opacity: 1;
         pointer-events: auto;
-        fill: rgba(255, 215, 0, .35);
-        stroke: #FFD700;
+        fill: var(--hl-fill);
+        stroke: var(--hl);
         stroke-width: 3;
-        filter: drop-shadow(0 0 8px #FFD700);
+        filter: drop-shadow(0 0 8px var(--hl-glow));
       }
 
       #buildingSVG path.panel-active:active {
-        fill: rgba(255, 215, 0, .6);
+        fill: var(--hl-fill-active);
       }
 
       /* popups have to fit a 390px-tall screen */
@@ -988,6 +996,115 @@
         border-radius: 8px;
       }
     }
+
+    /* ===========================
+   TOP-RIGHT NAV BUTTONS (Blog / Contact Us / Live Status)
+=========================== */
+
+    #topNav {
+      position: fixed;
+      top: 50px;
+      right: 144px;
+      /* sits just left of #siteLogo */
+      z-index: 9998;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #topNav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      text-decoration: none;
+      color: #fff;
+      font-family: Segoe UI, Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: .3px;
+      white-space: nowrap;
+      padding: 10px 16px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease;
+    }
+
+    #topNav a:hover {
+      background: #FFD700;
+      border-color: #FFD700;
+      color: #222;
+      transform: translateY(-1px);
+    }
+
+    #topNav .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, .7);
+      animation: livePulse 1.6s infinite;
+    }
+
+    @keyframes livePulse {
+      0% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, .7);
+      }
+
+      70% {
+        box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+      }
+
+      100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+      }
+    }
+
+    /* tablet / portrait mobile: nav drops just under the logo */
+    @media (max-width: 768px) {
+      #topNav {
+        top: 78px;
+        right: 12px;
+        gap: 6px;
+      }
+
+      #topNav a {
+        font-size: 10.5px;
+        padding: 7px 10px;
+        border-radius: 10px;
+        gap: 5px;
+      }
+
+      #topNav .live-dot {
+        width: 6px;
+        height: 6px;
+      }
+    }
+
+    /* short landscape phones */
+    @media (orientation: landscape) and (max-height: 500px) {
+      #topNav {
+        top: 8px;
+        right: 64px;
+        gap: 5px;
+      }
+
+      #topNav a {
+        font-size: 9.5px;
+        padding: 6px 9px;
+        border-radius: 9px;
+        gap: 4px;
+      }
+
+      #topNav .live-dot {
+        width: 6px;
+        height: 6px;
+      }
+    }
+
   </style>
 
 
@@ -1004,6 +1121,13 @@
   </header>
 
   <img id="siteLogo" src="images/logo.png" alt="Apple's Height Logo">
+
+  <!-- ===== TOP-RIGHT NAV — UPDATE THE href VALUES BELOW MANUALLY ===== -->
+  <nav id="topNav">
+    <a href="./ComingSoon.html">Blog</a>
+    <a href="./ComingSoon.html">Contact Us</a>
+    <a href="./ComingSoon.html"><span class="live-dot"></span>Live Status</a>
+  </nav>
   <div id="logoIntro">
     <img id="logoIntroImg" src="images/AH-logo.png" alt="Apple's Height">
   </div>
