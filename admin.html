@@ -9,6 +9,16 @@
 
     <title>Real Estate Admin</title>
 
+    <!-- Installable web app (required for push notifications on iPhone) -->
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Admin">
+    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+    <link rel="icon" href="./assets/icon-192.png">
+
     <style>
         * {
             margin: 0;
@@ -1795,6 +1805,23 @@
 
                     <div class="notification-setting-row">
                         <div>
+                            <div class="notification-setting-label">Phone Notifications</div>
+                            <div class="notification-setting-help">
+                                Get a system notification with sound on this phone, even when the
+                                admin app is closed. On iPhone you must first open this page in
+                                Safari and use Share &rarr; <b>Add to Home Screen</b>, then open it
+                                from the home screen and tap this button.
+                            </div>
+                            <div class="notification-setting-help" id="phoneNotificationStatus"
+                                 style="margin-top:6px;font-weight:600;"></div>
+                        </div>
+                        <button id="enablePhoneNotifications" class="notification-test-btn" type="button">
+                            📱 Enable On This Device
+                        </button>
+                    </div>
+
+                    <div class="notification-setting-row">
+                        <div>
                             <div class="notification-setting-label">Test Sound</div>
                             <div class="notification-setting-help">Use this button to hear the current notification volume.</div>
                         </div>
@@ -1984,8 +2011,6 @@
         let toastTimer = null;
         let titleTimer = null;
         let titleBase = document.title || "Admin Panel";
-        let audioContext = null;
-        let audioUnlocked = false;
 
         const NOTIFICATION_SETTINGS_KEY = "adminNotificationSettings";
 
@@ -2053,53 +2078,182 @@
                 saveNotificationSettings();
             });
 
-            test?.addEventListener("click", () => {
-                unlockNotificationSound();
-                playBellSound(true);
+            test?.addEventListener("click", async () => {
+                await unlockNotificationSound();
+                const ok = await playBellSound(true);
+                if (!ok) {
+                    alert(
+                        "The browser blocked notification audio.\n\n" +
+                        "Click anywhere on this page once (or check the tab's sound " +
+                        "permission / system volume) and press Test again."
+                    );
+                }
             });
         }
 
         setupNotificationSettingsUI();
 
         /* ---------- Sound ---------- */
-        function unlockNotificationSound() {
+        /*
+         * The bell is generated once as a WAV blob and played through an
+         * <audio> element. Media elements keep playing at full quality when the
+         * tab is in the background, while WebAudio oscillators/timers get
+         * throttled or suspended - that is why the old version stayed silent
+         * whenever the admin was on another tab. WebAudio is kept only as a
+         * fallback for browsers that refuse to play the blob.
+         */
+        let audioContext = null;
+        let audioUnlocked = false;
+        let bellSoundUrl = null;
+        let bellAudioPool = [];
+        let bellAutoplayBlocked = false;
+
+        function getNotificationVolume() {
+            const raw = Number(notificationSettings.volume);
+            if (!Number.isFinite(raw)) return 0.3;
+            return Math.max(0, Math.min(100, raw)) / 100;
+        }
+
+        function createBellSoundUrl() {
+            const sampleRate = 44100;
+            const duration = 1.1;
+            const length = Math.floor(sampleRate * duration);
+            const samples = new Float32Array(length);
+            const tones = [
+                { frequency: 880, delay: 0 },
+                { frequency: 1174, delay: 0.035 }
+            ];
+
+            let peak = 0;
+
+            for (let i = 0; i < length; i++) {
+                const t = i / sampleRate;
+                let value = 0;
+
+                for (const tone of tones) {
+                    const localTime = t - tone.delay;
+                    if (localTime < 0) continue;
+                    value +=
+                        Math.sin(2 * Math.PI * tone.frequency * localTime) *
+                        Math.exp(-3.2 * localTime);
+                }
+
+                samples[i] = value;
+                peak = Math.max(peak, Math.abs(value));
+            }
+
+            const scale = peak > 0 ? 0.6 / peak : 0;
+            const buffer = new ArrayBuffer(44 + length * 2);
+            const view = new DataView(buffer);
+
+            const writeText = (offset, text) => {
+                for (let i = 0; i < text.length; i++) {
+                    view.setUint8(offset + i, text.charCodeAt(i));
+                }
+            };
+
+            writeText(0, "RIFF");
+            view.setUint32(4, 36 + length * 2, true);
+            writeText(8, "WAVE");
+            writeText(12, "fmt ");
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeText(36, "data");
+            view.setUint32(40, length * 2, true);
+
+            for (let i = 0; i < length; i++) {
+                const clamped = Math.max(-1, Math.min(1, samples[i] * scale));
+                view.setInt16(44 + i * 2, Math.round(clamped * 32767), true);
+            }
+
+            return URL.createObjectURL(new Blob([buffer], { type: "audio/wav" }));
+        }
+
+        function getBellAudioElement() {
+            if (!bellSoundUrl) bellSoundUrl = createBellSoundUrl();
+
+            const free = bellAudioPool.find(
+                (audio) => audio.paused || audio.ended || audio.currentTime === 0
+            );
+            if (free) return free;
+
+            if (bellAudioPool.length >= 4) return bellAudioPool[0];
+
+            const audio = new Audio(bellSoundUrl);
+            audio.preload = "auto";
+            bellAudioPool.push(audio);
+            return audio;
+        }
+
+        // Browsers only allow audio after a user gesture. This must stay
+        // re-armable: if the first gesture fails, later gestures try again.
+        async function unlockNotificationSound() {
             try {
-                if (!audioContext) {
-                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-                    if (!AudioCtx) return;
-                    audioContext = new AudioCtx();
-                }
+                const audio = getBellAudioElement();
+                audio.volume = 0;
+                await audio.play();
+                audio.pause();
+                audio.currentTime = 0;
+                audio.volume = getNotificationVolume();
+                bellAutoplayBlocked = false;
+            } catch (error) {
+                bellAutoplayBlocked = true;
+            }
 
-                if (audioContext.state === "suspended") {
-                    audioContext.resume();
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    if (!audioContext) audioContext = new AudioCtx();
+                    if (audioContext.state === "suspended") {
+                        await audioContext.resume();
+                    }
                 }
-
-                audioUnlocked = true;
             } catch (error) {
                 console.warn("Notification sound could not be unlocked:", error);
             }
+
+            audioUnlocked =
+                !bellAutoplayBlocked ||
+                (!!audioContext && audioContext.state === "running");
+
+            if (audioUnlocked) removeUnlockListeners();
+            return audioUnlocked;
         }
 
-        // Browsers only allow audio after user interaction.
-        window.addEventListener("pointerdown", unlockNotificationSound, { once: true });
-        window.addEventListener("keydown", unlockNotificationSound, { once: true });
+        const unlockEvents = ["pointerdown", "touchstart", "keydown", "click"];
 
-        function playBellSound(forceTest = false) {
-            if (!audioUnlocked || !audioContext) return;
-            if (!forceTest && !notificationSettings.soundEnabled) return;
+        function onUnlockGesture() {
+            unlockNotificationSound();
+        }
+
+        function removeUnlockListeners() {
+            unlockEvents.forEach((type) => {
+                window.removeEventListener(type, onUnlockGesture, true);
+            });
+        }
+
+        unlockEvents.forEach((type) => {
+            window.addEventListener(type, onUnlockGesture, true);
+        });
+
+        function playBellWithAudioContext(volume) {
+            if (!audioContext || audioContext.state !== "running") return false;
 
             try {
-                if (audioContext.state === "suspended") {
-                    audioContext.resume();
-                }
-
                 const now = audioContext.currentTime;
                 const master = audioContext.createGain();
-                const volume = Math.max(0, Math.min(100, Number(notificationSettings.volume))) / 100;
 
+                // Volume is applied once, here only. The old code multiplied it
+                // twice (0.22 * v on master and 0.75 * v per oscillator), which
+                // made 30% volume effectively inaudible.
                 master.gain.setValueAtTime(0.0001, now);
                 master.gain.exponentialRampToValueAtTime(
-                    Math.max(0.0001, 0.22 * volume),
+                    Math.max(0.0001, volume),
                     now + 0.015
                 );
                 master.gain.exponentialRampToValueAtTime(0.0001, now + 1.05);
@@ -2113,24 +2267,271 @@
                     osc.type = "sine";
                     osc.frequency.setValueAtTime(frequency, now + offset);
                     gain.gain.setValueAtTime(0.0001, now + offset);
-                    gain.gain.exponentialRampToValueAtTime(
-                        Math.max(0.0001, 0.75 * volume),
-                        now + offset + 0.01
-                    );
-                    gain.gain.exponentialRampToValueAtTime(
-                        0.0001,
-                        now + offset + 0.95
-                    );
+                    gain.gain.exponentialRampToValueAtTime(0.45, now + offset + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.95);
 
                     osc.connect(gain);
                     gain.connect(master);
                     osc.start(now + offset);
                     osc.stop(now + 1.05);
                 });
+
+                return true;
             } catch (error) {
                 console.warn("Notification bell sound failed:", error);
+                return false;
             }
         }
+
+        async function playBellSound(forceTest = false) {
+            if (!forceTest && !notificationSettings.soundEnabled) return true;
+
+            const volume = getNotificationVolume();
+            if (volume <= 0) return true;
+
+            try {
+                const audio = getBellAudioElement();
+                audio.currentTime = 0;
+                audio.volume = volume;
+                await audio.play();
+                bellAutoplayBlocked = false;
+                audioUnlocked = true;
+                return true;
+            } catch (error) {
+                bellAutoplayBlocked = true;
+            }
+
+            // Fallback: WebAudio (works while the tab is focused).
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtx) {
+                    if (!audioContext) audioContext = new AudioCtx();
+                    if (audioContext.state === "suspended") {
+                        await audioContext.resume();
+                    }
+                }
+            } catch (error) {
+                /* ignored - reported below */
+            }
+
+            if (playBellWithAudioContext(volume)) return true;
+
+            console.warn(
+                "Notification sound blocked by the browser. Click anywhere on the admin page to enable it."
+            );
+            return false;
+        }
+
+        /* ---------- Service worker (background notifications) ----------
+         * A notification created with `new Notification()` belongs to the page,
+         * so Chrome can drop/ignore it while the window is minimised or the
+         * tab is frozen. A notification shown through the service worker
+         * registration is owned by the browser itself, so it still pops up when
+         * Chrome is only running in the background. The service worker is
+         * registered here (not only in the push script) so system notifications
+         * keep working even if Web Push is not configured yet.
+         */
+        let swRegistration = null;
+
+        async function getServiceWorkerRegistration() {
+            if (swRegistration) return swRegistration;
+            if (!("serviceWorker" in navigator)) return null;
+
+            try {
+                swRegistration =
+                    (await navigator.serviceWorker.getRegistration("./")) ||
+                    (await navigator.serviceWorker.register("./service-worker.js", { scope: "./" }));
+                await navigator.serviceWorker.ready;
+                return swRegistration;
+            } catch (error) {
+                console.warn("Service worker registration failed:", error);
+                return null;
+            }
+        }
+
+        getServiceWorkerRegistration();
+
+        async function showSystemNotification(title, body) {
+            if (!("Notification" in window)) return false;
+            if (Notification.permission !== "granted") return false;
+
+            const options = {
+                body,
+                icon: "assets/company-logo.png",
+                badge: "assets/company-logo.png",
+                tag: "new-visitor-request",
+                renotify: true,
+                requireInteraction: true,
+                silent: false,
+                vibrate: [180, 90, 180],
+                data: { url: location.href }
+            };
+
+            const registration = await getServiceWorkerRegistration();
+
+            if (registration) {
+                try {
+                    await registration.showNotification(title, options);
+                    return true;
+                } catch (error) {
+                    console.warn("Service worker notification failed:", error);
+                }
+            }
+
+            try {
+                const notification = new Notification(title, options);
+                notification.onclick = () => {
+                    window.focus();
+                    notification.close();
+                };
+                return true;
+            } catch (error) {
+                console.warn("Browser notification failed:", error);
+                return false;
+            }
+        }
+
+        // The service worker asks the page to ring when a push arrives while
+        // the admin tab is still open somewhere in the background.
+        navigator.serviceWorker?.addEventListener("message", (event) => {
+            if (event.data?.type === "play-bell") playBellSound();
+        });
+
+        /* ---------- Phone / device notifications ----------
+         * iOS only delivers Web Push to a page that was installed via
+         * Share > Add to Home Screen and is running standalone, and it only
+         * accepts the permission prompt from a real tap. Android/Chrome is
+         * happy either way. The sound and vibration of a system notification
+         * are controlled by the phone, not by JavaScript - so no bell is
+         * played here; the OS rings.
+         */
+        const phoneNotificationStatus = document.getElementById("phoneNotificationStatus");
+        const enablePhoneNotificationsBtn = document.getElementById("enablePhoneNotifications");
+
+        function isIosDevice() {
+            return (
+                /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+            );
+        }
+
+        function isStandaloneApp() {
+            return (
+                window.navigator.standalone === true ||
+                window.matchMedia("(display-mode: standalone)").matches ||
+                window.matchMedia("(display-mode: fullscreen)").matches
+            );
+        }
+
+        function setPhoneStatus(text, ok) {
+            if (!phoneNotificationStatus) return;
+            phoneNotificationStatus.textContent = text;
+            phoneNotificationStatus.style.color = ok ? "#16a34a" : "#dc2626";
+        }
+
+        function refreshPhoneStatus() {
+            if (!phoneNotificationStatus) return;
+
+            if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+                setPhoneStatus("This browser cannot show system notifications.", false);
+                return;
+            }
+
+            if (!window.isSecureContext) {
+                setPhoneStatus("Open the admin panel over HTTPS to enable phone notifications.", false);
+                return;
+            }
+
+            if (isIosDevice() && !isStandaloneApp()) {
+                setPhoneStatus(
+                    "iPhone: add this page to your Home Screen first, open it from there, then tap Enable.",
+                    false
+                );
+                return;
+            }
+
+            if (Notification.permission === "granted") {
+                setPhoneStatus("Notifications are allowed on this device.", true);
+            } else if (Notification.permission === "denied") {
+                setPhoneStatus(
+                    "Notifications are blocked. Allow them in the browser/app settings for this site.",
+                    false
+                );
+            } else {
+                setPhoneStatus("Not enabled yet on this device. Tap Enable.", false);
+            }
+        }
+
+        refreshPhoneStatus();
+
+        enablePhoneNotificationsBtn?.addEventListener("click", async () => {
+            if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+                setPhoneStatus("This browser cannot show system notifications.", false);
+                return;
+            }
+
+            if (!window.isSecureContext) {
+                setPhoneStatus("Phone notifications need an HTTPS address.", false);
+                return;
+            }
+
+            if (isIosDevice() && !isStandaloneApp()) {
+                setPhoneStatus(
+                    "iPhone: tap Share > Add to Home Screen, open the app from the home screen, then tap Enable again.",
+                    false
+                );
+                return;
+            }
+
+            enablePhoneNotificationsBtn.disabled = true;
+            setPhoneStatus("Enabling...", true);
+
+            try {
+                // Must run inside this tap for iOS to show the prompt.
+                let permission = Notification.permission;
+                if (permission === "default") {
+                    permission = await Notification.requestPermission();
+                }
+
+                if (permission !== "granted") {
+                    setPhoneStatus(
+                        "Permission was not granted. Allow notifications for this site and try again.",
+                        false
+                    );
+                    return;
+                }
+
+                await getServiceWorkerRegistration();
+
+                const result = await (window.enableBackgroundNotifications?.() ??
+                    Promise.resolve({ ok: false, message: "Push script did not load." }));
+
+                if (result?.ok) {
+                    setPhoneStatus(
+                        "Enabled. This device will get a notification with sound for every new request.",
+                        true
+                    );
+                } else {
+                    setPhoneStatus(
+                        `Notifications will show while the app is open. Background push not active: ${
+                            result?.message || "unknown reason"
+                        }`,
+                        false
+                    );
+                }
+
+                // Immediate proof, using the phone's own notification sound.
+                await showSystemNotification(
+                    "Notifications enabled",
+                    "This is how a new visitor request will look and sound."
+                );
+            } catch (error) {
+                console.error("Enable phone notifications failed:", error);
+                setPhoneStatus(`Could not enable: ${error?.message || error}`, false);
+            } finally {
+                enablePhoneNotificationsBtn.disabled = false;
+            }
+        });
 
         /* ---------- Badge ---------- */
         function updateNotificationBadge() {
@@ -2179,12 +2580,18 @@
         /* ---------- Browser permission ---------- */
         async function enableBrowserNotifications() {
             if (!("Notification" in window)) return;
-            if (Notification.permission !== "default") return;
 
-            try {
-                await Notification.requestPermission();
-            } catch (error) {
-                console.warn("Notification permission request failed:", error);
+            if (Notification.permission === "default") {
+                try {
+                    await Notification.requestPermission();
+                } catch (error) {
+                    console.warn("Notification permission request failed:", error);
+                }
+            }
+
+            if (Notification.permission === "granted") {
+                await getServiceWorkerRegistration();
+                window.enableBackgroundNotifications?.();
             }
         }
 
@@ -2219,27 +2626,14 @@
                 notificationToast?.classList.remove("show");
             }, 8000);
 
-            // Browser-level notification when admin is on another tab/window.
-            if (
-                document.hidden &&
-                "Notification" in window &&
-                Notification.permission === "granted"
-            ) {
-                try {
-                    const browserNotification = new Notification("New Visitor Request", {
-                        body: `${visitorName} has submitted a new visitor request.`,
-                        icon: "assets/company-logo.png",
-                        tag: "new-visitor-request",
-                        renotify: true
-                    });
-
-                    browserNotification.onclick = () => {
-                        window.focus();
-                        browserNotification.close();
-                    };
-                } catch (error) {
-                    console.warn("Browser notification failed:", error);
-                }
+            // System-level notification whenever the admin is not actively
+            // looking at this tab - covers another tab, another window, a
+            // minimised Chrome and a Chrome that only runs in the background.
+            if (document.hidden || !document.hasFocus()) {
+                showSystemNotification(
+                    "New Visitor Request",
+                    `${visitorName} has submitted a new visitor request.`
+                );
             }
         }
 
@@ -2280,6 +2674,11 @@
                 },
                 (payload) => {
                     console.log("New visitor request received:", payload.new);
+                    const newId = payload?.new?.id;
+                    if (newId !== undefined && newId !== null) {
+                        if (seenVisitorIds.has(String(newId))) return;
+                        seenVisitorIds.add(String(newId));
+                    }
                     showVisitorNotification(payload?.new || {});
                 }
             )
@@ -2295,7 +2694,83 @@
                 }
             });
 
+        /* ---------- Polling fallback ----------
+         * If the realtime channel errors, times out or is silently dropped
+         * (very common when the laptop sleeps or the network changes), new
+         * requests would never notify anyone. This poll catches them.
+         */
+        const seenVisitorIds = new Set();
+        let visitorPollPrimed = false;
+
+        async function pollForNewVisitors() {
+            try {
+                const { data, error } = await supabase
+                    .from("visitors")
+                    .select("id, name, created_at")
+                    .order("created_at", { ascending: false })
+                    .limit(5);
+
+                if (error || !Array.isArray(data)) return;
+
+                if (!visitorPollPrimed) {
+                    data.forEach((row) => seenVisitorIds.add(String(row.id)));
+                    visitorPollPrimed = true;
+                    return;
+                }
+
+                data
+                    .slice()
+                    .reverse()
+                    .forEach((row) => {
+                        const key = String(row.id);
+                        if (seenVisitorIds.has(key)) return;
+                        seenVisitorIds.add(key);
+                        console.log("New visitor request (poll):", row);
+                        showVisitorNotification(row);
+                    });
+            } catch (error) {
+                console.warn("Visitor poll failed:", error);
+            }
+        }
+
+        pollForNewVisitors();
+        const visitorPollTimer = setInterval(pollForNewVisitors, 15000);
+
+        /* ---------- Background keep-alive ----------
+         * Chrome throttles setInterval in hidden tabs (to roughly once a
+         * minute, and it can be paused completely when a tab gets frozen), so
+         * the poll above cannot be trusted while Chrome sits in the
+         * background. The realtime WebSocket is the reliable path there:
+         * incoming socket frames still wake the page. This watchdog makes sure
+         * the socket is really connected, and re-checks the moment the page
+         * wakes up, comes back online or regains focus.
+         */
+        function ensureRealtimeConnected() {
+            try {
+                const state = visitorNotificationChannel.state;
+                if (state !== "joined" && state !== "joining") {
+                    console.log("Re-subscribing visitor notification channel:", state);
+                    visitorNotificationChannel.subscribe();
+                }
+            } catch (error) {
+                console.warn("Realtime reconnect failed:", error);
+            }
+        }
+
+        setInterval(ensureRealtimeConnected, 20000);
+
+        function wakeUpNotifications() {
+            ensureRealtimeConnected();
+            pollForNewVisitors();
+        }
+
+        document.addEventListener("visibilitychange", wakeUpNotifications);
+        window.addEventListener("focus", wakeUpNotifications);
+        window.addEventListener("online", wakeUpNotifications);
+        window.addEventListener("pageshow", wakeUpNotifications);
+
         window.addEventListener("beforeunload", () => {
+            clearInterval(visitorPollTimer);
             supabase.removeChannel(visitorNotificationChannel);
         });
     </script>
@@ -2324,35 +2799,32 @@
 
         async function registerWebPush() {
             if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-                console.warn("Web Push is not supported by this browser.");
-                return;
+                return {
+                    ok: false,
+                    message: "this browser does not support Web Push (on iPhone, install the app to the Home Screen first)"
+                };
             }
 
             if (!window.isSecureContext) {
-                console.warn("Web Push requires HTTPS (localhost is also allowed for testing).");
-                return;
+                return { ok: false, message: "the site must be served over HTTPS" };
             }
 
             if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY.startsWith("REPLACE_")) {
-                console.warn("Web Push is not configured yet. Add your VAPID public key to admin.html.");
-                return;
+                return { ok: false, message: "the VAPID public key is not configured in admin.html" };
             }
 
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) return { ok: false, message: "no admin is signed in" };
 
-            const registration = await navigator.serviceWorker.register("./service-worker.js", {
-                scope: "./"
-            });
+            const registration =
+                (await navigator.serviceWorker.getRegistration("./")) ||
+                (await navigator.serviceWorker.register("./service-worker.js", { scope: "./" }));
 
-            let permission = Notification.permission;
-            if (permission === "default") {
-                permission = await Notification.requestPermission();
-            }
+            await navigator.serviceWorker.ready;
 
-            if (permission !== "granted") {
-                console.warn("Browser notifications are not permitted.");
-                return;
+            // Never prompt outside a user gesture - iOS silently rejects that.
+            if (Notification.permission !== "granted") {
+                return { ok: false, message: "notification permission has not been granted yet" };
             }
 
             let subscription = await registration.pushManager.getSubscription();
@@ -2366,7 +2838,7 @@
 
             const json = subscription.toJSON();
 
-            await supabase
+            const { error } = await supabase
                 .from("push_subscriptions")
                 .upsert({
                     user_id: user.id,
@@ -2377,13 +2849,29 @@
                     onConflict: "endpoint"
                 });
 
+            if (error) {
+                return { ok: false, message: `could not save the subscription (${error.message})` };
+            }
+
             console.log("Web Push subscription registered.");
+            return { ok: true, message: "subscribed" };
         }
 
-        // Do not block the admin page if push setup fails.
-        registerWebPush().catch(error => {
-            console.error("Web Push registration failed:", error);
-        });
+        // Reachable from the notification script so the subscription can be
+        // (re)created right after the admin grants permission.
+        window.enableBackgroundNotifications = () =>
+            registerWebPush().catch(error => {
+                console.error("Web Push registration failed:", error);
+                return { ok: false, message: String(error?.message || error) };
+            });
+
+        // Silently refresh/repair the subscription when permission already
+        // exists (page reload, new device token, reinstalled app).
+        if (window.Notification && Notification.permission === "granted") {
+            window.enableBackgroundNotifications().then(result => {
+                if (!result?.ok) console.warn("Web Push not active:", result?.message);
+            });
+        }
     </script>
 
 </body>
